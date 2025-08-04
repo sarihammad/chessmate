@@ -73,7 +73,7 @@ graph TD
 
 ## System Overview
 
-Chessmate implements a Clean Architecture pattern with clear separation of concerns across four main layers:
+Implements a Clean Architecture pattern with clear separation of concerns across four main layers:
 
 ### **GUI Layer**
 
@@ -156,7 +156,7 @@ make
 
 ```bash
 cd ../../server
-mvn clean install
+mvn clean package
 ```
 
 ### Run the Application
