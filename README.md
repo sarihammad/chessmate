@@ -156,7 +156,7 @@ make
 
 ```bash
 cd ../../server
-mvn spring-boot:run
+mvn clean install
 ```
 
 ### Run the Application
@@ -172,7 +172,7 @@ cd game/build
 
 ```bash
 cd server
-java -jar target/chessmate-server-1.0.0.jar
+mvn spring-boot:run
 ```
 
 ---
