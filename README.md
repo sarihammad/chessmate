@@ -4,7 +4,7 @@ A full-featured C++ chess application with a clean architecture, supporting loca
 
 ## Demo
 
-### Local Game Demo
+### Local Demo
 
 ![188940128-b0916b22-a747-4e29-83c7-4596eb01ab9a-ezgif com-crop](https://github.com/user-attachments/assets/52098b11-f8b6-4262-ac85-01cacff6bdb1)
 
@@ -18,6 +18,10 @@ A full-featured C++ chess application with a clean architecture, supporting loca
 
 ```mermaid
 graph TD
+    %% Entry point
+    Start(["User Launches App"]) --> A1
+
+    %% GUI Layer
     subgraph "GUI Layer (SFML)"
         A1["Main Menu<br>(runMainMenu)"] -->|"User Selection"| A2["Game GUI<br>(runGUI)"]
         A2 -->|"Mouse Events"| A3["Board View<br>(BoardView)"]
@@ -25,31 +29,44 @@ graph TD
         A2 -->|"UI Events"| A5["Button Widgets<br>& Overlays"]
     end
 
+    %% Application Layer
     subgraph "Application Layer"
-        B1["Game Controller<br>(GameController)"] -->|"Orchestrates"| B2["Game State<br>Management"]
-        B2 -->|"Player Actions"| B3["Player Interface<br>(Human/AI/Network)"]
+        B1["Game Controller<br>(GameController)"] -->|"Orchestrates"| B2["Game State<br>Manager"]
+        B2 -->|"Turn Control"| B3["Player Interface"]
         B3 -->|"Move Validation"| B4["Game Engine<br>(Game)"]
     end
 
+    %% Domain Layer
     subgraph "Domain Layer"
         C1["Board<br>(Board)"] -->|"Contains"| C2["Pieces<br>(Piece Hierarchy)"]
-        C2 -->|"Move Generation"| C3["Move Logic<br>(Legal Moves)"]
-        C3 -->|"State Changes"| C4["Game State<br>(GameState)"]
-        C4 -->|"Rules Engine"| C5["Chess Rules<br>(Check/Checkmate)"]
+        C2 -->|"Move Generation"| C3["Move Logic"]
+        C3 -->|"State Updates"| C4["Game State<br>(GameState)"]
+        C4 -->|"Applies Rules"| C5["Rules Engine<br>(Check, Mate, Draw)"]
+
+        %% Piece Hierarchy
+        C2 --> P1["Piece<br>(Abstract)"]
+        P1 --> P2["Pawn"]
+        P1 --> P3["Rook"]
+        P1 --> P4["Knight"]
+        P1 --> P5["Bishop"]
+        P1 --> P6["Queen"]
+        P1 --> P7["King"]
     end
 
+    %% Infrastructure Layer
     subgraph "Infrastructure Layer"
         D1["AI Player<br>(AIPlayer)"] -->|"Uses"| D2["AI Evaluator<br>(Minimax + Alpha-Beta)"]
-        D3["Network Player<br>(NetworkPlayer)"] -->|"Communicates"| D4["WebSocket Client<br>(WebSocketClient)"]
-        D4 -->|"JSON Messages"| D5["Spring Boot Server<br>(WebSocket Handler)"]
-        D6["Human Player<br>(HumanPlayer)"] -->|"Input Processing"| D7["Mouse/Keyboard<br>Event Handling"]
+        D3["Network Player<br>(NetworkPlayer)"] -->|"Communicates"| D4["WebSocket Client"]
+        D4 -->|"JSON Messages"| D5["Spring Boot Server"]
+        D6["Human Player<br>(HumanPlayer)"] -->|"Input"| D7["Mouse/Keyboard<br>Event Handling"]
     end
 
+    %% Cross-layer connections
     A2 -->|"Game Actions"| B1
     B1 -->|"Board Updates"| C1
-    B3 -->|"Player Types"| D1
-    B3 -->|"Player Types"| D3
-    B3 -->|"Player Types"| D6
+    B3 -->|"Player Type"| D1
+    B3 -->|"Player Type"| D3
+    B3 -->|"Player Type"| D6
 ```
 
 ---
@@ -159,8 +176,6 @@ java -jar target/chessmate-server-1.0.0.jar
 ```
 
 ---
-
-## Development & Extension
 
 ### Performance Considerations
 
