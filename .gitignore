@@ -3,7 +3,7 @@ build/
 target/
 game/build/
 server/target/
-
+ 
 # IDE files
 .vscode/
 .idea/
