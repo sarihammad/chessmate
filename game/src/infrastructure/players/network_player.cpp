@@ -1,0 +1,27 @@
+#include "infrastructure/players/network_player.hpp"
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+namespace chess {
+
+NetworkPlayer::NetworkPlayer(Color color, WebSocketClient& wsClient)
+    : Player(color), client(wsClient) {
+    // The "join" message is now sent from the GUI, not here.
+}
+
+bool NetworkPlayer::makeMove(Board& board, Position& from, Position& to) {
+    if (!from.isValid() || !to.isValid()) return false;
+
+    auto piece = board.getPieceAt(from);
+    if (!piece || piece->getColor() != color) return false;
+    if (!piece->isValidMove(from, to, board)) return false;
+
+    // A network player reflects a move received from the server.
+    // We just update the board; we DO NOT send a message back.
+    board.movePiece(from, to);
+
+    return true;
+}
+
+}
