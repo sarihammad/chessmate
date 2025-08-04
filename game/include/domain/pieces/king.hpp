@@ -1,0 +1,31 @@
+#pragma once
+#include "../piece.hpp"
+#include "movable_piece.hpp"
+
+namespace chess {
+
+class King : public Piece, public MovablePiece {
+private:
+    bool hasMoved = false;
+    
+public:
+    explicit King(Color c) : Piece(c) {}
+
+    PieceType getType() const override { return PieceType::King; }
+
+    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+
+    std::shared_ptr<Piece> clone() const override {
+        return std::make_shared<King>(*this);
+    }
+
+    char symbol() const override {
+        return color == Color::White ? 'K' : 'k';
+    }
+
+    void markMoved() override;
+
+    bool hasMovedAlready() const override;
+};
+
+}
