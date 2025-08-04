@@ -1,0 +1,3526 @@
+CHESSMATE PROJECT - COMBINED SOURCE CODE
+==================================================
+
+
+================================================================================
+FILE: game/include/application/game_controller.hpp
+================================================================================
+
+#pragma once
+#include <memory>
+#include <SFML/Graphics.hpp>
+#include <gui/board_view.hpp>
+#include <domain/game.hpp>
+#include <infrastructure/network/websocket_client.hpp>
+
+namespace chess {
+
+class Player;
+
+// orchestrates the game loop, state transitions, and delegates to domain logic and UI
+class GameController {
+public:
+    GameController();
+    void run();
+    void handleEvent(const sf::Event& event);
+    void update();
+    void render(sf::RenderWindow& window);
+
+private:
+    enum class AppState { Menu, LocalGame, OnlineGame, AIGame };
+    AppState state_ = AppState::Menu;
+
+    void startLocalGame();
+    void startOnlineGame();
+    void startAIGame();
+    void showGameOver(sf::RenderWindow& window, const std::string& message);
+
+    // Player management
+    void createLocalPlayers();
+    void createOnlinePlayers(WebSocketClient& wsClient);
+    void createAIPlayers();
+
+    std::unique_ptr<Game> game_;
+    std::unique_ptr<BoardView> boardView_;
+    std::unique_ptr<WebSocketClient> wsClient_;
+    
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/board.hpp
+================================================================================
+
+#pragma once
+
+#include "utils/utils.hpp"
+#include "piece.hpp"
+#include <vector>
+#include <memory>
+#include <optional>
+
+namespace chess {
+
+class Board {
+private:
+    std::vector<std::vector<std::shared_ptr<Piece>>> squares;
+
+public:
+    Board();
+    std::shared_ptr<Piece> getPieceAt(const Position& pos) const;
+    void setPieceAt(const Position& pos, std::shared_ptr<Piece> piece);
+    void movePiece(const Position& from, const Position& to);
+    void setupInitialPosition();
+    Board clone() const;
+
+    bool isEmpty(const Position& pos) const;
+
+    bool isCheck(Color color) const;
+};
+
+}
+
+
+
+================================================================================
+FILE: game/include/domain/enums.hpp
+================================================================================
+
+#pragma once
+
+enum class Color {
+	White, Black
+};
+
+enum class PieceType {
+	King, Queen, Rook, Bishop, Knight, Pawn
+};
+
+
+
+================================================================================
+FILE: game/include/domain/game.hpp
+================================================================================
+
+#pragma once
+
+#include "board.hpp"
+#include "domain/player.hpp"
+#include "infrastructure/players/human_player.hpp"
+#include "infrastructure/players/ai_player.hpp"
+#include "utils/utils.hpp"
+#include "domain/enums.hpp"
+#include <memory>
+#include <unordered_map>
+#include <SFML/Audio.hpp>
+
+namespace chess {
+
+enum class GameResult {
+    InProgress,
+    WhiteWins,
+    BlackWins,
+    Stalemate
+};
+
+class Game {
+private:
+    Board board;
+    std::unique_ptr<Player> whitePlayer;
+    std::unique_ptr<Player> blackPlayer;
+    Color currentTurn;
+    GameResult result;
+    std::unordered_map<std::string, sf::SoundBuffer> soundBuffers;
+    std::unordered_map<std::string, sf::Sound> sounds;
+    void loadSounds();
+    // Game owns the board, the players, the game state, and all game logic.
+
+public:
+    Game();
+
+    bool playTurn(Position from, Position to);
+    void aiAutoMove();
+
+    Board& getBoard();
+    const Board& getBoard() const;
+    Color getCurrentTurn() const;
+    GameResult getResult() const;
+
+    bool isCheck(Color color) const;
+    bool isCheckOnBoard(const Board& b, Color color) const;
+
+    bool isWhiteHuman() const;
+    bool isBlackHuman() const;
+
+    void setWhitePlayer(std::unique_ptr<Player> player);
+    void setBlackPlayer(std::unique_ptr<Player> player);
+    Player* getCurrentPlayer();
+
+    bool isMoveLegal(Position from, Position to);
+    bool isInsufficientMaterial() const;
+
+    void playSound(const std::string& name);
+    void finalizePromotion(Position pos, PieceType newType);
+
+    bool isGameOver() const;
+
+private:
+    bool hasValidMove(Color color);
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/gamestate.hpp
+================================================================================
+
+#pragma once
+
+#include "board.hpp"
+#include "enums.hpp"
+
+namespace chess {
+
+class GameState {
+public:
+    Board board;
+    Color currentTurn;
+
+    GameState(const Board& b, Color turn)
+        : board(b), currentTurn(turn) {}
+
+    const Board& getBoard() const { return board; }
+    Color getTurn() const { return currentTurn; }
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/move.hpp
+================================================================================
+
+// #pragma once
+
+// struct Move {
+//     Position from;
+//     Position to;
+
+//     Move(Position from, Position to) : from(from), to(to) {}
+//     Move() = default;
+// };
+
+
+================================================================================
+FILE: game/include/domain/piece.hpp
+================================================================================
+
+#pragma once
+
+#include "utils/utils.hpp"
+#include "enums.hpp"
+#include <memory>
+
+namespace chess {
+
+class Board;
+
+class Piece {
+protected:
+    Color color;
+
+public:
+    explicit Piece(Color c) : color(c) {}
+    virtual ~Piece() = default;
+
+    Color getColor() const { return color; }
+    virtual PieceType getType() const = 0;
+
+    virtual bool isValidMove(const Position& from, const Position& to, const Board& board) const = 0;
+
+    virtual std::shared_ptr<Piece> clone() const = 0;
+
+    virtual char symbol() const = 0;
+};
+
+}
+
+
+
+================================================================================
+FILE: game/include/domain/pieces/bishop.hpp
+================================================================================
+
+#pragma once
+#include "../piece.hpp"
+
+namespace chess {
+
+class Bishop : public Piece {
+public:
+    explicit Bishop(Color c) : Piece(c) {}
+
+    PieceType getType() const override { return PieceType::Bishop; }
+
+    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+
+    std::shared_ptr<Piece> clone() const override {
+        return std::make_shared<Bishop>(*this);
+    }
+
+    char symbol() const override {
+        return color == Color::White ? 'B' : 'b';
+    }
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/pieces/king.hpp
+================================================================================
+
+#pragma once
+#include "../piece.hpp"
+#include "movable_piece.hpp"
+
+namespace chess {
+
+class King : public Piece, public MovablePiece {
+private:
+    bool hasMoved = false;
+    
+public:
+    explicit King(Color c) : Piece(c) {}
+
+    PieceType getType() const override { return PieceType::King; }
+
+    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+
+    std::shared_ptr<Piece> clone() const override {
+        return std::make_shared<King>(*this);
+    }
+
+    char symbol() const override {
+        return color == Color::White ? 'K' : 'k';
+    }
+
+    void markMoved() override;
+
+    bool hasMovedAlready() const override;
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/pieces/knight.hpp
+================================================================================
+
+#pragma once
+#include "../piece.hpp"
+
+namespace chess {
+
+class Knight : public Piece {
+public:
+    explicit Knight(Color c) : Piece(c) {}
+
+    PieceType getType() const override { return PieceType::Knight; }
+
+    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+
+    std::shared_ptr<Piece> clone() const override {
+        return std::make_shared<Knight>(*this);
+    }
+
+    char symbol() const override {
+        return color == Color::White ? 'N' : 'n';
+    }
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/pieces/movable_piece.hpp
+================================================================================
+
+#pragma once
+
+namespace chess {
+
+class MovablePiece {
+public:
+    virtual void markMoved() = 0;
+    virtual bool hasMovedAlready() const = 0;
+    virtual ~MovablePiece() = default;
+};
+
+}
+
+
+
+================================================================================
+FILE: game/include/domain/pieces/pawn.hpp
+================================================================================
+
+#pragma once
+
+#include "../piece.hpp"
+
+namespace chess {
+
+class Pawn : public Piece {
+public:
+    explicit Pawn(Color c) : Piece(c) {}
+    PieceType getType() const override { return PieceType::Pawn; }
+
+    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+
+    std::shared_ptr<Piece> clone() const override {
+        return std::make_shared<Pawn>(*this);
+    }
+
+    char symbol() const override {
+        return color == Color::White ? 'P' : 'p';
+    }
+
+    void setEnPassantCapturable(bool value) { 
+        enPassantCapturable = value; 
+    }
+    
+    bool isEnPassantCapturable() const { 
+        return enPassantCapturable; 
+    }
+
+private:
+    bool enPassantCapturable = false;
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/pieces/queen.hpp
+================================================================================
+
+#pragma once
+#include "../piece.hpp"
+
+namespace chess {
+
+class Queen : public Piece {
+public:
+    explicit Queen(Color c) : Piece(c) {}
+
+    PieceType getType() const override { return PieceType::Queen; }
+
+    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+
+    std::shared_ptr<Piece> clone() const override {
+        return std::make_shared<Queen>(*this);
+    }
+
+    char symbol() const override {
+        return color == Color::White ? 'Q' : 'q';
+    }
+};
+
+}
+
+
+================================================================================
+FILE: game/include/domain/pieces/rook.hpp
+================================================================================
+
+#pragma once
+
+#include "../piece.hpp"
+#include "movable_piece.hpp"
+
+namespace chess {
+
+class Rook : public Piece, public MovablePiece {
+private:
+    bool hasMoved = false;
+
+public:
+    explicit Rook(Color c) : Piece(c) {}
+
+    PieceType getType() const override { return PieceType::Rook; }
+
+    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+
+    std::shared_ptr<Piece> clone() const override {
+        return std::make_shared<Rook>(*this);
+    }
+
+    char symbol() const override {
+        return color == Color::White ? 'R' : 'r';
+    }
+
+    void markMoved() override;
+    bool hasMovedAlready() const override;
+};
+
+}
+
+
+
+================================================================================
+FILE: game/include/domain/player.hpp
+================================================================================
+
+#pragma once
+
+#include "domain/enums.hpp"
+#include "domain/board.hpp"
+#include "utils/utils.hpp"
+// #include "move.hpp"
+#include "gamestate.hpp"
+#include <memory>
+
+namespace chess {
+
+class Player {
+protected:
+    Color color;
+
+public:
+    explicit Player(Color c) : color(c) {}
+    virtual ~Player() = default;
+
+    Color getColor() const { return color; }
+
+    virtual bool makeMove(Board& board, Position& from, Position& to) = 0;
+};
+
+}
+
+
+
+================================================================================
+FILE: game/include/gui/board_view.hpp
+================================================================================
+
+#pragma once
+#include <SFML/Graphics.hpp>
+#include <memory>
+#include <domain/board.hpp>
+#include <domain/piece.hpp>
+
+namespace chess {
+
+// BoardView handles rendering the chess board and pieces, and board-related input
+class BoardView {
+public:
+    BoardView(const sf::Font& font, float tileSize = 100.f);
+    void draw(sf::RenderWindow& window, const Board& board) const;
+    // Returns the board position (row, col) for a given mouse position, or {-1, -1} if out of bounds
+    std::pair<int, int> screenToBoard(const sf::Vector2i& mousePos) const;
+    // Returns the top-left pixel position for a given board square
+    sf::Vector2f boardToScreen(int row, int col) const;
+    // Get the image path for a piece
+    std::string getImagePath(const Piece& piece) const;
+    // Optionally, handle board-specific input (e.g., highlight, drag, etc.)
+    // void handleInput(...);
+
+private:
+    float tileSize_;
+    sf::Font font_;
+    // Optionally, cache piece textures/sprites here
+};
+
+} // namespace chess 
+
+
+================================================================================
+FILE: game/include/gui/gui.cpp
+================================================================================
+
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+#include <iostream>
+#include <map>
+#include <optional>
+#include <thread>
+#include <chrono>
+#include "domain/game.hpp"
+#include "gui/widgets/sprite_piece.hpp"
+#include "domain/pieces/rook.hpp"
+#include "domain/pieces/bishop.hpp"
+#include "domain/pieces/knight.hpp"
+#include "domain/pieces/queen.hpp"
+#include "infrastructure/network/websocket_client.hpp"
+#include "infrastructure/players/network_player.hpp"
+#include <vector>
+#include <functional>
+
+namespace chess {
+
+constexpr int TILE_SIZE = 100;
+
+struct Button {
+    sf::RectangleShape rect;
+    sf::Text label;
+    std::function<void()> onClick;
+    bool hovered = false;
+};
+
+std::string getImagePath(const Piece& piece) {
+    std::string color = (piece.getColor() == Color::White) ? "white" : "black";
+    std::string type;
+    switch (piece.getType()) {
+        case PieceType::Pawn: type = "pawn"; break;
+        case PieceType::Rook: type = "rook"; break;
+        case PieceType::Knight: type = "knight"; break;
+        case PieceType::Bishop: type = "bishop"; break;
+        case PieceType::Queen: type = "queen"; break;
+        case PieceType::King: type = "king"; break;
+    }
+    return "assets/images/" + color + "_" + type + ".png";
+}
+
+
+void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool humanIsWhite) {
+    sf::Font font;
+    if (!font.openFromFile("assets/fonts/Arial.ttf")) {
+        std::cerr << "Failed to load font for game UI.\n";
+        return;
+    }
+    sf::Texture boardTex;
+
+    if (!boardTex.loadFromFile("assets/images/board.png")) {
+        std::cerr << "Failed to load board texture.";
+        return;
+    }
+    sf::Sprite boardSprite(boardTex);
+
+    Game game;
+    std::map<Position, SpritePiece> spriteMap;
+
+    std::string assignedColor = humanIsWhite ? "white" : "black";
+    bool waitingForMatch = wsClient != nullptr;
+    std::string statusMessage = "";
+    NetworkPlayer* netPlayer = nullptr;
+
+    // For online games, wait for connection before proceeding
+    if (wsClient) {
+        statusMessage = "Connecting to server...";
+        // Wait for connection with timeout
+        int connectionAttempts = 0;
+        const int maxAttempts = 50; // 5 seconds at 60fps
+        while (!wsClient->isConnected() && connectionAttempts < maxAttempts) {
+            // Process events to keep window responsive
+            while (const std::optional<sf::Event> event = window.pollEvent()) {
+                if (event->is<sf::Event::Closed>()) {
+                    window.close();
+                    return;
+                }
+            }
+            
+            // Show connection status
+            window.clear();
+            window.draw(boardSprite);
+            
+            sf::Font statusFont;
+            statusFont.openFromFile("assets/fonts/Arial.ttf");
+            sf::Text statusText(statusFont, statusMessage, 40);
+            statusText.setFillColor(sf::Color::White);
+            statusText.setPosition(sf::Vector2f(100.f, 350.f));
+            window.draw(statusText);
+            window.display();
+            
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            connectionAttempts++;
+        }
+        
+        if (!wsClient->isConnected()) {
+            statusMessage = "Failed to connect to server";
+            // Show error and return to menu
+            while (window.isOpen()) {
+                while (const std::optional<sf::Event> event = window.pollEvent()) {
+                    if (event->is<sf::Event::Closed>()) {
+                        window.close();
+                        return;
+                    }
+                }
+                
+                window.clear();
+                window.draw(boardSprite);
+                
+                sf::Font statusFont;
+                statusFont.openFromFile("assets/fonts/Arial.ttf");
+                sf::Text statusText(statusFont, statusMessage, 40);
+                statusText.setFillColor(sf::Color::Red);
+                statusText.setPosition(sf::Vector2f(100.f, 350.f));
+                window.draw(statusText);
+                window.display();
+            }
+            return;
+        }
+        
+        statusMessage = "Connected! Waiting for opponent...";
+    }
+
+    auto boardToScreen = [&](const Position& pos) -> sf::Vector2f {
+        if (assignedColor == "black") {
+            return sf::Vector2f(static_cast<float>((7 - pos.col) * TILE_SIZE), static_cast<float>(pos.row * TILE_SIZE));
+        }
+        return sf::Vector2f(static_cast<float>(pos.col * TILE_SIZE), static_cast<float>((7 - pos.row) * TILE_SIZE));
+    };
+
+    auto screenToBoard = [&](const sf::Vector2i& screenPos) -> Position {
+        int c = screenPos.x / TILE_SIZE;
+        int r = screenPos.y / TILE_SIZE;
+        if (assignedColor == "black") {
+            return Position(r, 7 - c);
+        }
+        return Position(7 - r, c);
+    };
+
+    auto syncSpriteMap = [&]() {
+        spriteMap.clear();
+        for (int r = 0; r < 8; ++r) {
+            for (int c = 0; c < 8; ++c) {
+                Position pos(r, c);
+                auto piece = game.getBoard().getPieceAt(pos);
+                if (piece) {
+                    std::string img = getImagePath(*piece);
+                    spriteMap.insert_or_assign(pos, SpritePiece(piece, img, 0, 0));
+                    spriteMap.at(pos).sprite.setPosition(boardToScreen(pos));
+                }
+            }
+        }
+    };
+
+    if (vsAI) {
+        if (humanIsWhite) {
+            game.setWhitePlayer(std::make_unique<HumanPlayer>(Color::White));
+            game.setBlackPlayer(std::make_unique<AIPlayer>(Color::Black));
+        } else {
+            game.setWhitePlayer(std::make_unique<AIPlayer>(Color::White));
+            game.setBlackPlayer(std::make_unique<HumanPlayer>(Color::Black));
+        }
+    } else if (wsClient) {
+        wsClient->setMessageHandler([&](const json& msg) {
+            std::cout << "[WS MESSAGE] Received: " << msg.dump() << std::endl;
+            if (msg.value("type", "") == "start") {
+                if (msg.contains("color")) {
+                    assignedColor = msg["color"];
+                    waitingForMatch = false;
+                    statusMessage = std::string("Matched! You are ") + (assignedColor == "white" ? "White" : "Black");
+                    if (assignedColor == "white") {
+                        game.setWhitePlayer(std::make_unique<HumanPlayer>(Color::White));
+                        auto networkPlayerPtr = std::make_unique<NetworkPlayer>(Color::Black, *wsClient);
+                        netPlayer = networkPlayerPtr.get();
+                        game.setBlackPlayer(std::move(networkPlayerPtr));
+                    } else {
+                        auto networkPlayerPtr = std::make_unique<NetworkPlayer>(Color::White, *wsClient);
+                        netPlayer = networkPlayerPtr.get();
+                        game.setWhitePlayer(std::move(networkPlayerPtr));
+                        game.setBlackPlayer(std::make_unique<HumanPlayer>(Color::Black));
+                    }
+                    std::cout << "[MATCHED] Assigned color: " << assignedColor << std::endl;
+                    syncSpriteMap(); 
+                } else {
+                    std::cerr << "[ERROR] 'start' message missing 'color' field: " << msg.dump() << std::endl;
+                }
+            } else if (msg.value("type", "") == "opponentMove") {
+                Position from(msg["from"]["row"], msg["from"]["col"]);
+                Position to(msg["to"]["row"], msg["to"]["col"]);
+                std::cout << "[RECV] GUI received opponent move: from (" << from.row << "," << from.col << ") to (" << to.row << "," << to.col << ")" << std::endl;
+                game.playTurn(from, to);
+                syncSpriteMap();
+            } else if (msg.value("type", "") == "gameOver") {
+                std::cout << "[INFO] Game over: " << msg.dump() << std::endl;
+            }
+        });
+        statusMessage = "Waiting for opponent...";
+        wsClient->sendMessage(json{{"type", "join"}});
+    } else {
+        game.setWhitePlayer(std::make_unique<HumanPlayer>(Color::White));
+        game.setBlackPlayer(std::make_unique<HumanPlayer>(Color::Black));
+    }
+
+    game.playSound("game_start");
+
+    bool isDragging = false;
+    Position dragStartPos(-1, -1);
+    SpritePiece* draggedPiece = nullptr;
+    bool isMouseDown = false;
+    sf::Vector2i mouseDownPos;
+    bool dragConfirmed = false;
+
+    sf::CircleShape moveIndicator(TILE_SIZE / 5.f);
+    moveIndicator.setFillColor(sf::Color(0, 0, 0, 50));
+    moveIndicator.setOrigin(sf::Vector2f(moveIndicator.getRadius(), moveIndicator.getRadius()));
+
+    sf::RectangleShape captureIndicator(sf::Vector2f(TILE_SIZE, TILE_SIZE));
+    captureIndicator.setFillColor(sf::Color(255, 0, 0, 255));
+    captureIndicator.setOrigin(sf::Vector2f(TILE_SIZE / 2.f, TILE_SIZE / 2.f));
+
+    bool isWhiteHuman = game.isWhiteHuman();
+    bool isBlackHuman = game.isBlackHuman();
+
+    bool isPromoting = false;
+    Position promotionPos(-1, -1);
+    Color promotionColor = Color::White;
+
+    sf::Texture whitePromotionTexture;
+    if (!whitePromotionTexture.loadFromFile("assets/images/white_promotion.png")) {
+        std::cerr << "Failed to load white promotion texture.";
+        return;
+    }
+    sf::Sprite whitePromotionSprite(whitePromotionTexture);
+
+    sf::Texture blackPromotionTexture;
+    if (!blackPromotionTexture.loadFromFile("assets/images/black_promotion.png")) {
+        std::cerr << "Failed to load black promotion texture.";
+        return;
+    }
+    sf::Sprite blackPromotionSprite(blackPromotionTexture);
+
+    syncSpriteMap();
+
+    Position selected(-1, -1);
+    bool hasSelected = false;
+    std::vector<Position> validMoves;
+
+    sf::RectangleShape menuBtn(sf::Vector2f(120.f, 45.f));
+    menuBtn.setPosition({20.f, 20.f});
+    menuBtn.setFillColor(sf::Color(30, 30, 30, 220));
+    menuBtn.setOutlineThickness(2.f);
+    menuBtn.setOutlineColor(sf::Color(0, 200, 0));
+    sf::Text menuLabel(font, "Menu", 28);
+    menuLabel.setFillColor(sf::Color(200, 255, 200));
+    menuLabel.setStyle(sf::Text::Bold);
+    menuLabel.setPosition({menuBtn.getPosition().x + 20.f, menuBtn.getPosition().y + 5.f});
+
+    while (window.isOpen()) {
+        while (const std::optional<sf::Event> event = window.pollEvent()) {
+            Color localPlayerColor = (assignedColor == "white") ? Color::White : Color::Black;
+            bool isMyTurn = !wsClient || (game.getCurrentTurn() == localPlayerColor);
+            if (waitingForMatch) {
+                if (event->is<sf::Event::Closed>()) window.close();
+                continue;
+            }
+
+            if (event->is<sf::Event::MouseMoved>()) {
+                if (!isMyTurn) continue;
+                const auto* mouseMoveEvent = event->getIf<sf::Event::MouseMoved>();
+                float mx = static_cast<float>(mouseMoveEvent->position.x);
+                float my = static_cast<float>(mouseMoveEvent->position.y);
+
+                if (isMouseDown && !isDragging) {
+                    int dx = mouseMoveEvent->position.x - mouseDownPos.x;
+                    int dy = mouseMoveEvent->position.y - mouseDownPos.y;
+                    if (std::abs(dx) > 5 || std::abs(dy) > 5) {
+                        Position clicked = screenToBoard(mouseMoveEvent->position);
+
+                        auto piece = game.getBoard().getPieceAt(clicked);
+                        if (piece && piece->getColor() == game.getCurrentTurn() && piece->getColor() == localPlayerColor) {
+                            dragStartPos = clicked;
+                            isDragging = true;
+                            dragConfirmed = true;
+
+                            auto it = spriteMap.find(clicked);
+                            if (it != spriteMap.end()) {
+                                draggedPiece = &it->second;
+                                draggedPiece->sprite.setOrigin(sf::Vector2f(TILE_SIZE / 2.f, TILE_SIZE / 2.f));
+                                draggedPiece->sprite.setPosition(sf::Vector2f(mx, my));
+                            }
+
+                            validMoves.clear();
+                            auto piece = game.getBoard().getPieceAt(clicked);
+                            if (piece) {
+                                for (int r = 0; r < 8; ++r) {
+                                    for (int c = 0; c < 8; ++c) {
+                                        Position to(r, c);
+                                        if (game.isMoveLegal(clicked, to)) {
+                                            validMoves.push_back(to);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (isDragging && draggedPiece) {
+                    draggedPiece->sprite.setPosition(sf::Vector2f(mx, my));
+                }
+            }
+
+            if (event->is<sf::Event::MouseButtonReleased>()) {
+                if (!isMyTurn) continue;
+                if (event->getIf<sf::Event::MouseButtonReleased>()->button == sf::Mouse::Button::Left) {
+                    isMouseDown = false;
+                    Position target = screenToBoard(event->getIf<sf::Event::MouseButtonReleased>()->position);
+
+                    if (isDragging && dragConfirmed) {
+                        if (std::find(validMoves.begin(), validMoves.end(), target) != validMoves.end()) {
+                            if (game.playTurn(dragStartPos, target)) {
+                                if (wsClient && ((game.isWhiteHuman() && game.getCurrentTurn() == Color::Black) ||
+                                                (game.isBlackHuman() && game.getCurrentTurn() == Color::White))) {
+                                    json moveMsg = {
+                                        { "type", "move" },
+                                        { "from", { { "row", dragStartPos.row }, { "col", dragStartPos.col } } },
+                                        { "to",   { { "row", target.row }, { "col", target.col } } }
+                                    };
+                                    std::cout << "[SEND] GUI sending move: " << moveMsg.dump() << std::endl;
+                                    wsClient->sendMessage(moveMsg);
+                                }
+
+                                isDragging = false;
+                                draggedPiece = nullptr;
+                                validMoves.clear();
+                                syncSpriteMap();
+                                // Handle promotion logic if needed
+                                auto movedPiece = game.getBoard().getPieceAt(target);
+                                if (movedPiece && movedPiece->getType() == PieceType::Pawn) {
+                                    if (movedPiece->getColor() == Color::White && target.row == 7) {
+                                        isPromoting = true;
+                                        promotionColor = Color::White;
+                                        promotionPos = target;
+                                        whitePromotionSprite.setPosition(sf::Vector2f(static_cast<float>(target.col * TILE_SIZE), static_cast<float>((7 - target.row) * TILE_SIZE)));
+                                    } else if (movedPiece->getColor() == Color::Black && target.row == 0) {
+                                        isPromoting = true;
+                                        promotionColor = Color::Black;
+                                        promotionPos = target;
+                                        blackPromotionSprite.setPosition(sf::Vector2f(static_cast<float>(target.col * TILE_SIZE), static_cast<float>((7 - target.row) * TILE_SIZE)));
+                                    }
+                                }
+                                continue;
+                            }
+
+                            if (wsClient && dynamic_cast<NetworkPlayer*>(game.getCurrentPlayer().get())) {
+                            json moveMsg = {
+                                { "type", "move" },
+                                { "from", { { "row", dragStartPos.row }, { "col", dragStartPos.col } } },
+                                { "to",   { { "row", target.row }, { "col", target.col } } }
+                            };
+                                wsClient->sendMessage(moveMsg);
+                            }
+
+
+                        }
+
+                        if (draggedPiece) {
+                            draggedPiece->sprite.setOrigin(sf::Vector2f(0.f, 0.f));
+                            draggedPiece->sprite.setPosition(boardToScreen(dragStartPos));
+                        }
+
+                        isDragging = false;
+                        draggedPiece = nullptr;
+                        validMoves.clear();
+                        dragConfirmed = false;
+                    } else {
+                        Position clicked = screenToBoard(event->getIf<sf::Event::MouseButtonReleased>()->position);
+                        auto piece = game.getBoard().getPieceAt(clicked);
+                        if (!hasSelected && piece && piece->getColor() == game.getCurrentTurn() && piece->getColor() == localPlayerColor) {
+                            selected = clicked;
+                            hasSelected = true;
+
+                            validMoves.clear();
+                            auto piece = game.getBoard().getPieceAt(clicked);
+                            if (piece) {
+                                for (int r = 0; r < 8; ++r) {
+                                    for (int c = 0; c < 8; ++c) {
+                                        Position to(r, c);
+                                        if (game.isMoveLegal(clicked, to)) {
+                                            validMoves.push_back(to);
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (hasSelected) {
+                            if (std::find(validMoves.begin(), validMoves.end(), clicked) != validMoves.end()) {
+                                Position fromPos = selected; // Store before playTurn changes state
+                                if (game.playTurn(selected, clicked)) {
+                                    if (wsClient) {
+                                        json moveMsg = {
+                                            { "type", "move" },
+                                            { "from", { { "row", fromPos.row }, { "col", fromPos.col } } },
+                                            { "to",   { { "row", clicked.row }, { "col", clicked.col } } }
+                                        };
+                                        std::cout << "[SEND] GUI sending move: " << moveMsg.dump() << std::endl;
+                                        wsClient->sendMessage(moveMsg);
+                                    }
+
+                                    syncSpriteMap();
+                                    auto movedPiece = game.getBoard().getPieceAt(clicked);
+                                    if (movedPiece && movedPiece->getType() == PieceType::Pawn) {
+                                        if (movedPiece->getColor() == Color::White && clicked.row == 7) {
+                                            isPromoting = true;
+                                            promotionColor = Color::White;
+                                            promotionPos = clicked;
+                                            whitePromotionSprite.setPosition(sf::Vector2f(static_cast<float>(clicked.col * TILE_SIZE), static_cast<float>((7 - clicked.row) * TILE_SIZE)));
+                                        } else if (movedPiece->getColor() == Color::Black && clicked.row == 0) {
+                                            isPromoting = true;
+                                            promotionColor = Color::Black;
+                                            promotionPos = clicked;
+                                            blackPromotionSprite.setPosition(sf::Vector2f(static_cast<float>(clicked.col * TILE_SIZE), static_cast<float>((7 - clicked.row) * TILE_SIZE)));
+                                        }
+                                    }
+                                    hasSelected = false;
+                                    validMoves.clear();
+                                    // handle promotion if needed
+                                }
+                            } else {
+                                hasSelected = false;
+                                validMoves.clear();
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+                continue;
+            }
+
+            if (game.getResult() != GameResult::InProgress)
+                continue;
+
+            if (isPromoting) {
+                if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
+                    if (mouseEvent->button == sf::Mouse::Button::Left) {
+                        int px = mouseEvent->position.x - promotionPos.col * TILE_SIZE;
+                        int py = mouseEvent->position.y - (7 - promotionPos.row) * TILE_SIZE;
+
+                        PieceType selectedType;
+                        if (px < TILE_SIZE / 2 && py < TILE_SIZE / 2)
+                            selectedType = PieceType::Rook;
+                        else if (px >= TILE_SIZE / 2 && py < TILE_SIZE / 2)
+                            selectedType = PieceType::Queen;
+                        else if (px < TILE_SIZE / 2 && py >= TILE_SIZE / 2)
+                            selectedType = PieceType::Bishop;
+                        else
+                            selectedType = PieceType::Knight;
+
+                        game.finalizePromotion(promotionPos, selectedType);
+
+                        isPromoting = false;
+                        syncSpriteMap();
+
+                        // game.aiAutoMove();
+                        syncSpriteMap();
+                    }
+                }
+                continue;
+            }
+
+            if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
+                if (!isMyTurn) continue;
+                if (mouseEvent->button == sf::Mouse::Button::Left) {
+                    isMouseDown = true;
+                    mouseDownPos = mouseEvent->position;
+                }
+            }
+        }
+
+        if (waitingForMatch) {
+            // Only show waiting message, do not process moves or allow interaction
+            sf::Font statusFont;
+            statusFont.openFromFile("assets/fonts/Arial.ttf");
+            sf::Text statusText(statusFont, statusMessage, 40);
+            statusText.setFillColor(sf::Color::White);
+            statusText.setPosition(sf::Vector2f(100.f, 350.f));
+            window.clear();
+            window.draw(boardSprite);
+            window.draw(statusText);
+            window.display();
+            continue;
+        }
+
+        window.clear();
+        window.draw(boardSprite);
+
+        for (const auto& pos : validMoves) {
+            auto screenPos = boardToScreen(pos);
+            float x = screenPos.x + TILE_SIZE / 2.f;
+            float y = screenPos.y + TILE_SIZE / 2.f;
+            auto piece = game.getBoard().getPieceAt(pos);
+            if (piece && piece->getColor() != game.getCurrentTurn()) {
+                captureIndicator.setPosition(sf::Vector2f(x, y));
+                window.draw(captureIndicator);
+            } else {
+                moveIndicator.setPosition(sf::Vector2f(x, y));
+                window.draw(moveIndicator);
+            }
+        }
+
+        for (const auto& [pos, sp] : spriteMap) {
+            if (isDragging && pos == dragStartPos) continue;
+            window.draw(sp.sprite);
+        }
+
+        // draw dragged piece last so it's on top
+        if (isDragging && draggedPiece) {
+            window.draw(draggedPiece->sprite);
+        }
+
+        if (isPromoting) {
+            spriteMap.erase(promotionPos);
+            if (promotionColor == Color::White)
+                window.draw(whitePromotionSprite);
+            else
+                window.draw(blackPromotionSprite);
+        }
+
+        if (!statusMessage.empty()) {
+            sf::Font statusFont;
+            statusFont.openFromFile("assets/fonts/Arial.ttf");
+            sf::Text statusText(statusFont, statusMessage, 30);
+            statusText.setFillColor(sf::Color::Green);
+            statusText.setPosition(sf::Vector2f(100.f, 50.f));
+            window.draw(statusText);
+        }
+
+        window.draw(menuBtn);
+        window.draw(menuLabel);
+
+        window.display();
+    }
+}
+
+void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
+    sf::Font font;
+    if (!font.openFromFile("assets/fonts/Arial.ttf")) {
+        std::cerr << "Failed to load font for main menu.\n";
+        return;
+    }
+
+    // Gradient background: black to green
+    sf::VertexArray gradient(sf::PrimitiveType::TriangleStrip, 4);
+    gradient[0].position = sf::Vector2f(0.f, 0.f);
+    gradient[1].position = sf::Vector2f(800.f, 0.f);
+    gradient[2].position = sf::Vector2f(0.f, 800.f);
+    gradient[3].position = sf::Vector2f(800.f, 800.f);
+    gradient[0].color = sf::Color::Black;
+    gradient[1].color = sf::Color(0, 60, 0);
+    gradient[2].color = sf::Color(0, 120, 0);
+    gradient[3].color = sf::Color(0, 200, 0);
+
+    sf::Text title(font, "Chessmate", 70);
+    title.setFillColor(sf::Color::White);
+    title.setStyle(sf::Text::Bold);
+    title.setPosition(400.f - title.getLocalBounds().width / 2.f, 80.f);
+
+    std::vector<Button> buttons;
+    std::vector<std::string> labels = {"Local", "Online", "Play vs AI", "Quit"};
+    float btnWidth = 350, btnHeight = 70, spacing = 30;
+    float startY = 250;
+    for (int i = 0; i < 4; ++i) {
+        Button btn;
+        btn.rect.setSize(sf::Vector2f(btnWidth, btnHeight));
+        btn.rect.setOrigin({btnWidth / 2, btnHeight / 2});
+        btn.rect.setPosition({400, startY + i * (btnHeight + spacing)});
+        btn.rect.setFillColor(sf::Color(30, 30, 30, 220));
+        btn.rect.setOutlineThickness(3);
+        btn.rect.setOutlineColor(sf::Color(0, 200, 0));
+        // btn.rect.setRadius(20);
+        btn.label.setFont(font);
+        btn.label.setString(labels[i]);
+        btn.label.setCharacterSize(36);
+        btn.label.setFillColor(sf::Color(200, 255, 200));
+        btn.label.setStyle(sf::Text::Bold);
+        btn.label.setPosition({400 - btn.label.getLocalBounds().position.x / 2, btn.rect.getPosition().y - btn.label.getLocalBounds().position.y / 1.5});
+        buttons.push_back(btn);
+    }
+
+    // Button actions
+    buttons[0].onClick = [&]() { window.clear(); window.display(); runGUI(window, nullptr, false, true); };
+    buttons[1].onClick = [&]() { window.clear(); window.display(); chess::WebSocketClient* wsClient = new chess::WebSocketClient(); wsClient->connect(serverUri); runGUI(window, wsClient, false, true); delete wsClient; };
+    buttons[2].onClick = [&]() {
+        // Color selection overlay
+        sf::RectangleShape overlay(sf::Vector2f(800.f, 800.f));
+        overlay.setFillColor(sf::Color(0, 0, 0, 180));
+        sf::Text prompt(font, "Choose your color", 40);
+        prompt.setFillColor(sf::Color(200, 255, 200));
+        prompt.setPosition({400.f - prompt.getLocalBounds().position.x / 2.f, 200.f});
+        sf::RectangleShape whiteBtn(sf::Vector2f(200.f, 70.f));
+        whiteBtn.setOrigin(sf::Vector2f(100.f, 35.f));
+        whiteBtn.setPosition(sf::Vector2f(250.f, 400.f));
+        whiteBtn.setFillColor(sf::Color(220, 220, 220));
+        sf::Text whiteLabel(font, "White", 32);
+        whiteLabel.setFillColor(sf::Color::Black);
+        whiteLabel.setPosition({250.f - whiteLabel.getLocalBounds().position.x / 2.f, 400.f - whiteLabel.getLocalBounds().position.y / 1.5f});
+        sf::RectangleShape blackBtn(sf::Vector2f(200.f, 70.f));
+        blackBtn.setOrigin(sf::Vector2f(100.f, 35.f));
+        blackBtn.setPosition(sf::Vector2f(550.f, 400.f));
+        blackBtn.setFillColor(sf::Color(30, 30, 30));
+        sf::Text blackLabel(font, "Black", 32);
+        blackLabel.setFillColor(sf::Color(200, 255, 200));
+        blackLabel.setPosition({550.f - blackLabel.getLocalBounds().position.x / 2.f, 400.f - blackLabel.getLocalBounds().position.y / 1.5f});
+        bool choosing = true;
+        while (choosing && window.isOpen()) {
+            // sf::Event e;
+            while (const std::optional event = window.pollEvent()) {
+                if (event->is<sf::Event::Closed>()) { window.close(); return; }
+                if (event->is<sf::Event::MouseButtonPressed>() && event->getIf<sf::Event::MouseLeft>()) {
+                    sf::Vector2f moustPos(static_cast<float>(event->getIf<sf::Event::MouseButtonPressed>()->position.x), static_cast<float>(event->getIf<sf::Event::MouseButtonPressed>()->position.y));
+                    if (whiteBtn.getGlobalBounds().contains(moustPos)) {
+                        window.clear(); window.display(); runGUI(window, nullptr, true, true); return;
+                    }
+                    if (blackBtn.getGlobalBounds().contains(moustPos)) {
+                        window.clear(); window.display(); runGUI(window, nullptr, true, false); return;
+                    }
+                }
+            }
+            window.clear();
+            window.draw(overlay);
+            window.draw(prompt);
+            window.draw(whiteBtn); window.draw(whiteLabel);
+            window.draw(blackBtn); window.draw(blackLabel);
+            window.display();
+        }
+    };
+    buttons[3].onClick = [&]() { window.close(); };
+
+    while (window.isOpen()) {
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        for (auto& btn : buttons) {
+            btn.hovered = btn.rect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos));
+            btn.rect.setFillColor(btn.hovered ? sf::Color(0, 200, 0, 220) : sf::Color(30, 30, 30, 220));
+            btn.label.setFillColor(btn.hovered ? sf::Color::White : sf::Color(200, 255, 200));
+        }
+        // sf::Event event;
+        while (const std::optional event = window.pollEvent()) {
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+                return;
+            }
+            if (event->is<sf::Event::MouseButtonPressed>() && event->getIf<sf::Event::MouseLeft>()) {
+                for (auto& btn : buttons) {
+                    if (btn.hovered && btn.onClick) {
+                        btn.onClick();
+                        return;
+                    }
+                }
+            }
+        }
+        window.clear();
+        window.draw(gradient);
+        window.draw(title);
+        for (const auto& btn : buttons) {
+            window.draw(btn.rect);
+            window.draw(btn.label);
+        }
+        window.display();
+    }
+}
+
+}
+
+
+
+
+================================================================================
+FILE: game/include/gui/gui.hpp
+================================================================================
+
+#pragma once
+
+#include <SFML/Graphics.hpp>
+#include "network/websocket_client.hpp"
+
+namespace chess {
+    void runMainMenu(sf::RenderWindow& window, const std::string& serverUri);
+    void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient = nullptr);
+}
+
+
+
+================================================================================
+FILE: game/include/gui/texture_manager.hpp
+================================================================================
+
+#pragma once
+#include <SFML/Graphics.hpp>
+#include <string>
+#include <unordered_map>
+
+namespace chess {
+
+class TextureManager {
+public:
+    static sf::Texture& getTexture(const std::string& path);
+    static void clearCache();
+
+private:
+    static std::unordered_map<std::string, sf::Texture> textures_;
+};
+
+} // namespace chess
+
+
+
+================================================================================
+FILE: game/include/gui/widgets/Button.hpp
+================================================================================
+
+#pragma once
+#include <SFML/Graphics.hpp>
+#include <functional>
+#include <string>
+
+namespace chess {
+
+class Button {
+public:
+    Button(const sf::Font& font, const std::string& text, float x, float y, float width, float height);
+    
+    bool handleClick(const sf::Vector2i& mousePos);
+    void update(const sf::Vector2i& mousePos);
+    void draw(sf::RenderWindow& window) const;
+    void setOnClick(std::function<void()> callback);
+
+private:
+    sf::RectangleShape rect;
+    sf::Text label;
+    std::function<void()> onClick;
+};
+
+} // namespace chess 
+
+
+================================================================================
+FILE: game/include/gui/widgets/sprite_piece.hpp
+================================================================================
+
+#pragma once
+#include <SFML/Graphics.hpp>
+#include <functional>
+#include <memory>
+#include <string>
+
+namespace chess {
+
+class Piece;
+
+class SpritePiece {
+public:
+    SpritePiece(std::shared_ptr<Piece> piece, const std::string& imagePath, float x, float y);
+    
+    void setPosition(float x, float y);
+    void draw(sf::RenderWindow& window) const;
+    
+    sf::Sprite sprite;
+    std::shared_ptr<Piece> piece;
+};
+
+} // namespace chess
+
+
+
+================================================================================
+FILE: game/include/infrastructure/ai/ai_evaluator.hpp
+================================================================================
+
+#pragma once
+#include "domain/board.hpp"
+#include "domain/enums.hpp"
+
+namespace chess {
+
+extern const double pawnTable[8][8];
+extern const double knightTable[8][8];
+extern const double bishopTable[8][8];
+extern const double rookTable[8][8];
+extern const double queenTable[8][8];
+extern const double kingTable[8][8];
+
+int evaluateBoard(const Board& board, Color aiColor);
+
+}
+
+
+
+================================================================================
+FILE: game/include/infrastructure/network/websocket_client.hpp
+================================================================================
+
+#pragma once
+
+#if !defined(ASIO_STANDALONE)
+#define ASIO_STANDALONE
+#endif
+
+#include <websocketpp/client.hpp>
+#include <websocketpp/config/asio_no_tls_client.hpp>
+#include <functional>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <queue>
+#include <condition_variable>
+#include <nlohmann/json.hpp>
+#include "utils/utils.hpp"
+
+using websocketpp::connection_hdl;
+using json = nlohmann::json;
+using MessageHandler = std::function<void(const json&)>;
+
+namespace chess {
+
+class WebSocketClient {
+public:
+    
+    WebSocketClient();
+    ~WebSocketClient();
+
+    void connect(const std::string& uri);
+    void sendMessage(const json& message);
+    void setMessageHandler(MessageHandler handler);
+    void close();
+    void setMoveHandler(std::function<void(Position, Position)> handler);
+    bool isConnected() const { return connected; }
+
+    std::function<void(Position, Position)> onMoveReceived;
+
+private:
+    void onOpen(connection_hdl hdl);
+    void onMessage(connection_hdl hdl, websocketpp::config::asio_client::message_type::ptr msg);
+    void onClose(connection_hdl hdl);
+    void run();
+
+    websocketpp::client<websocketpp::config::asio_client> client;
+    connection_hdl connection;
+    std::thread clientThread;
+    std::atomic<bool> connected;
+    MessageHandler messageHandler;
+};
+
+}
+
+
+================================================================================
+FILE: game/include/infrastructure/players/ai_player.hpp
+================================================================================
+
+#pragma once
+
+#include "domain/player.hpp"
+#include "../ai/ai_evaluator.hpp"
+
+namespace chess {
+
+class AIPlayer : public Player {
+public:
+    explicit AIPlayer(Color c) : Player(c) {}
+
+    bool makeMove(Board& board, Position& from, Position& to) override;
+
+private:
+    int minimax(Board& board, int depth, int alpha, int beta, bool maximizing, Position& bestFrom, Position& bestTo);
+};
+
+}
+
+
+
+================================================================================
+FILE: game/include/infrastructure/players/human_player.hpp
+================================================================================
+
+#pragma once
+
+#include "domain/player.hpp"
+
+namespace chess {
+
+class HumanPlayer : public Player {
+public:
+    explicit HumanPlayer(Color c);
+    bool makeMove(Board& board, Position& from, Position& to) override;
+};
+
+}
+
+
+================================================================================
+FILE: game/include/infrastructure/players/network_player.hpp
+================================================================================
+
+#pragma once
+
+#include "domain/player.hpp"
+#include "infrastructure/network/websocket_client.hpp"
+
+namespace chess {
+
+class NetworkPlayer : public Player {
+public:
+    NetworkPlayer(Color color, WebSocketClient& wsClient);
+    bool makeMove(Board& board, Position& from, Position& to) override;
+
+private:
+    WebSocketClient& client;
+};
+
+}
+
+
+================================================================================
+FILE: game/include/utils/utils.hpp
+================================================================================
+
+#pragma once
+#include "domain/enums.hpp"
+
+namespace chess {
+
+struct Position {
+    int row = 0;
+    int col = 0;
+
+    Position() = default;
+    Position(int r, int c) : row(r), col(c) {}
+
+    bool isValid() const;
+
+    bool operator==(const Position& other) const;
+
+    bool operator!=(const Position& other) const;
+
+    bool operator<(const Position& other) const;
+};
+
+Color getOtherColor(Color c);
+
+struct Move {
+    Position from;
+    Position to;
+
+    Move(Position from, Position to) : from(from), to(to) {}
+    Move() = default;
+};
+
+}
+
+
+
+
+================================================================================
+FILE: game/main.cpp
+================================================================================
+
+#include <application/game_controller.hpp>
+
+int main() {
+    chess::GameController controller;
+    controller.run();
+    return 0;
+}
+
+
+================================================================================
+FILE: game/src/application/game_controller.cpp
+================================================================================
+
+#include "application/game_controller.hpp"
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <gui/widgets/Button.hpp>
+#include <gui/board_view.hpp>
+#include <domain/game.hpp>
+#include <domain/board.hpp>
+#include <domain/move.hpp>
+#include <domain/player.hpp>
+#include <infrastructure/players/human_player.hpp>
+#include <infrastructure/players/network_player.hpp>
+#include <infrastructure/players/ai_player.hpp>
+#include <vector>
+#include <memory>
+#include <nlohmann/json.hpp>
+
+namespace chess {
+
+GameController::GameController() {
+    // Initialize game controller
+}
+
+void GameController::createLocalPlayers() {
+    // Instantiate two human players and set them in Game
+    auto white = std::make_unique<HumanPlayer>(Color::White);
+    auto black = std::make_unique<HumanPlayer>(Color::Black);
+    game_->setWhitePlayer(std::move(white));
+    game_->setBlackPlayer(std::move(black));
+}
+
+void GameController::createOnlinePlayers(WebSocketClient& wsClient) {
+    // Instantiate a human player and a network player and set them in Game
+    auto white = std::make_unique<HumanPlayer>(Color::White);
+    auto black = std::make_unique<NetworkPlayer>(Color::Black, wsClient);
+    game_->setWhitePlayer(std::move(white));
+    game_->setBlackPlayer(std::move(black));
+}
+
+void GameController::createAIPlayers() {
+    // Instantiate a human player and an AI player and set them in Game
+    auto white = std::make_unique<HumanPlayer>(Color::White);
+    auto black = std::make_unique<AIPlayer>(Color::Black);
+    game_->setWhitePlayer(std::move(white));
+    game_->setBlackPlayer(std::move(black));
+}
+
+void GameController::showGameOver(sf::RenderWindow& window, const std::string& message) {
+    state_ = AppState::Menu;
+}
+
+void GameController::startLocalGame() {
+    std::cout << "Starting local game..." << std::endl;
+    state_ = AppState::LocalGame;
+    game_ = std::make_unique<Game>();
+    createLocalPlayers();
+    std::cout << "Game initialized with players" << std::endl;
+    if (!boardView_) {
+        sf::Font font;
+        if (!font.openFromFile("assets/fonts/Arial.ttf")) {
+            std::cerr << "Failed to load font: assets/fonts/Arial.ttf" << std::endl;
+            return;
+        }
+        boardView_ = std::make_unique<BoardView>(font, 100.f);
+    }
+    std::cout << "Local game started successfully" << std::endl;
+}
+
+void GameController::startOnlineGame() {
+    state_ = AppState::OnlineGame;
+    game_ = std::make_unique<Game>();
+    if (!boardView_) {
+        sf::Font font;
+        if (!font.openFromFile("assets/fonts/Arial.ttf")) {
+            std::cerr << "Failed to load font: assets/fonts/Arial.ttf" << std::endl;
+            return;
+        }
+        boardView_ = std::make_unique<BoardView>(font, 100.f);
+    }
+
+    // Set up WebSocket client
+    std::string serverUri = "ws://localhost:8080/game"; // Or configurable
+    wsClient_ = std::make_unique<WebSocketClient>();
+    wsClient_->connect(serverUri);
+
+    // Create players
+    createOnlinePlayers(*wsClient_);
+}
+
+void GameController::startAIGame() {
+    state_ = AppState::AIGame;
+    game_ = std::make_unique<Game>();
+    createAIPlayers();
+    if (!boardView_) {
+        sf::Font font;
+        if (!font.openFromFile("assets/fonts/Arial.ttf")) {
+            std::cerr << "Failed to load font: assets/fonts/Arial.ttf" << std::endl;
+            return;
+        }
+        boardView_ = std::make_unique<BoardView>(font, 100.f);
+    }
+}
+
+void GameController::run() {
+    sf::RenderWindow window(sf::VideoMode({800, 800}), "Chessmate");
+    window.setFramerateLimit(60);
+
+    // Load font for UI
+    sf::Font font;
+    if (!font.openFromFile("assets/fonts/Arial.ttf")) {
+        std::cerr << "Failed to load font: assets/fonts/Arial.ttf" << std::endl;
+        return;
+    }
+
+    // Create menu buttons
+    std::vector<Button> buttons;
+    std::vector<std::string> labels = {"Local Game", "Online Game", "AI Game", "Quit"};
+    float btnWidth = 300, btnHeight = 60, spacing = 20;
+    float startY = 300;
+    for (int i = 0; i < 4; ++i) {
+        buttons.emplace_back(font, labels[i], 400 - btnWidth/2, startY + i * (btnHeight + spacing), btnWidth, btnHeight);
+    }
+
+    // Set button actions
+    buttons[0].setOnClick([&]() { startLocalGame(); });
+    buttons[1].setOnClick([&]() { startOnlineGame(); });
+    buttons[2].setOnClick([&]() { startAIGame(); });
+    buttons[3].setOnClick([&]() { window.close(); });
+
+    // Game state variables
+    std::pair<int, int> selected = {-1, -1};
+    Position from, to;
+
+    // Main game loop
+    while (window.isOpen()) {
+        while (const std::optional event = window.pollEvent()) {
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+                return;
+            }
+            if (event->is<sf::Event::MouseButtonPressed>()) {
+                const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>();
+                if (mouseEvent->button == sf::Mouse::Button::Left) {
+                    sf::Vector2i mousePos = {mouseEvent->position.x, mouseEvent->position.y};
+                    if (state_ == AppState::Menu) {
+                        for (auto& btn : buttons) {
+                            if (btn.handleClick(mousePos)) {
+                                break;
+                            }
+                        }
+                    } else if (state_ == AppState::LocalGame || state_ == AppState::AIGame) {
+                        // Handle game board clicks
+                        auto [row, col] = boardView_->screenToBoard({mouseEvent->position.x, mouseEvent->position.y});
+                        if (row >= 0 && col >= 0) {
+                            if (selected.first == -1) {
+                                // Selecting a piece
+                                auto piece = game_->getBoard().getPieceAt({row, col});
+                                if (piece && piece->getColor() == game_->getCurrentTurn()) {
+                                    selected = {row, col};
+                                    from = Position(row, col);
+                                    std::cout << "Selected piece at (" << row << ", " << col << ")" << std::endl;
+                                }
+                            } else {
+                                // Moving to a square
+                                to = Position(row, col);
+                                std::cout << "Attempting move from (" << from.row << ", " << from.col << ") to (" << to.row << ", " << to.col << ")" << std::endl;
+                                
+                                // Use the player system to make the move
+                                Player* currentPlayer = game_->getCurrentPlayer();
+                                if (currentPlayer && currentPlayer->makeMove(game_->getBoard(), from, to)) {
+                                    game_->playTurn(from, to);
+                                    std::cout << "Move executed successfully" << std::endl;
+                                    
+                                    // AI move for AI game
+                                    if (state_ == AppState::AIGame && !game_->isGameOver() && game_->getCurrentTurn() == Color::Black) {
+                                        Position aiFrom, aiTo;
+                                        Player* aiPlayer = game_->getCurrentPlayer();
+                                        if (aiPlayer && aiPlayer->makeMove(game_->getBoard(), aiFrom, aiTo)) {
+                                            game_->playTurn(aiFrom, aiTo);
+                                        }
+                                    }
+                                } else {
+                                    std::cout << "Invalid move" << std::endl;
+                                }
+                                selected = {-1, -1};
+                            }
+                        }
+                    } else if (state_ == AppState::OnlineGame) {
+                        // Handle online game clicks (only for local player)
+                        if (game_->getCurrentTurn() == Color::White) {
+                            auto [row, col] = boardView_->screenToBoard({mouseEvent->position.x, mouseEvent->position.y});
+                            if (row >= 0 && col >= 0) {
+                                if (selected.first == -1) {
+                                    if (game_->getBoard().getPieceAt({row, col}) &&
+                                        game_->getBoard().getPieceAt({row, col})->getColor() == Color::White) {
+                                        selected = {row, col};
+                                        from = Position(row, col);
+                                    }
+                                } else {
+                                    to = Position(row, col);
+                                    Player* currentPlayer = game_->getCurrentPlayer();
+                                    if (currentPlayer && currentPlayer->makeMove(game_->getBoard(), from, to)) {
+                                        game_->playTurn(from, to);
+                                        // Send move to server
+                                        if (wsClient_) {
+                                            nlohmann::json msg = { {"type", "move"}, {"from", { {"row", from.row}, {"col", from.col} }}, {"to", { {"row", to.row}, {"col", to.col} }} };
+                                            wsClient_->sendMessage(msg);
+                                        }
+                                    }
+                                    selected = {-1, -1};
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update button hover states for menu
+        if (state_ == AppState::Menu) {
+            sf::Vector2i mousePos = {sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y};
+            for (auto& btn : buttons) {
+                btn.update(mousePos);
+            }
+        }
+
+        // Handle network player moves for online game
+        if (state_ == AppState::OnlineGame && game_->getCurrentTurn() == Color::Black) {
+            Position netFrom, netTo;
+            Player* currentPlayer = game_->getCurrentPlayer();
+            if (currentPlayer && currentPlayer->makeMove(game_->getBoard(), netFrom, netTo)) {
+                game_->playTurn(netFrom, netTo);
+            }
+        }
+
+        // Render based on current state
+        window.clear();
+        
+        if (state_ == AppState::Menu) {
+            // Render menu
+            for (const auto& btn : buttons) {
+                btn.draw(window);
+            }
+        } else {
+            // Render game board
+            if (boardView_ && game_) {
+                boardView_->draw(window, game_->getBoard());
+                
+                // Draw selection highlight
+                if (selected.first != -1) {
+                    sf::RectangleShape highlight(sf::Vector2f(100.f, 100.f));
+                    highlight.setPosition(boardView_->boardToScreen(selected.first, selected.second));
+                    highlight.setFillColor(sf::Color(0, 255, 0, 80));
+                    window.draw(highlight);
+                }
+            }
+        }
+        
+        window.display();
+
+        // Check for game over
+        if (game_ && game_->isGameOver()) {
+            showGameOver(window, "Game Over");
+            state_ = AppState::Menu;
+            selected = {-1, -1};
+        }
+    }
+}
+
+}
+
+
+================================================================================
+FILE: game/src/domain/board.cpp
+================================================================================
+
+#include "domain/board.hpp"
+#include "domain/pieces/pawn.hpp"
+#include "domain/pieces/rook.hpp"
+#include "domain/pieces/knight.hpp"
+#include "domain/pieces/bishop.hpp"
+#include "domain/pieces/queen.hpp"
+#include "domain/pieces/king.hpp"
+#include <iostream>
+
+namespace chess {
+
+Board::Board() : squares(8, std::vector<std::shared_ptr<Piece>>(8, nullptr)) {}
+
+std::shared_ptr<Piece> Board::getPieceAt(const Position& pos) const {
+    if (!pos.isValid()) return nullptr;
+    return squares[pos.row][pos.col];
+}
+
+Board Board::clone() const {
+    Board copy;
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position pos(r, c);
+            auto piece = getPieceAt(pos);
+            if (piece) {
+                copy.setPieceAt(pos, piece->clone());
+            }
+        }
+    }
+    return copy;
+}
+
+void Board::setPieceAt(const Position& pos, std::shared_ptr<Piece> piece) {
+    if (pos.isValid())
+        squares[pos.row][pos.col] = piece;
+}
+
+void Board::movePiece(const Position& from, const Position& to) {
+    if (!from.isValid() || !to.isValid()) return;
+
+    auto piece = getPieceAt(from);
+
+    // en passant
+    if (piece && piece->getType() == PieceType::Pawn && isEmpty(to) &&
+        std::abs(to.col - from.col) == 1 && std::abs(to.row - from.row) == 1) {
+        // diagonal move to empty square -> en passant
+        int capturedPawnRow = (piece->getColor() == Color::White) ? to.row - 1 : to.row + 1;
+        Position capturedPos(capturedPawnRow, to.col);
+        setPieceAt(capturedPos, nullptr);
+    }
+
+    setPieceAt(to, piece);
+    setPieceAt(from, nullptr);
+}
+
+bool Board::isEmpty(const Position& pos) const {
+    return getPieceAt(pos) == nullptr;
+}
+
+void Board::setupInitialPosition() {
+    std::cout << "Setting up initial board position..." << std::endl;
+    
+    for (int col = 0; col < 8; ++col) {
+        setPieceAt(Position(1, col), std::make_shared<Pawn>(Color::White));
+        setPieceAt(Position(6, col), std::make_shared<Pawn>(Color::Black));
+    }
+
+    std::vector<std::shared_ptr<Piece>> whiteBack = {
+        std::make_shared<Rook>(Color::White),
+        std::make_shared<Knight>(Color::White),
+        std::make_shared<Bishop>(Color::White),
+        std::make_shared<Queen>(Color::White),
+        std::make_shared<King>(Color::White),
+        std::make_shared<Bishop>(Color::White),
+        std::make_shared<Knight>(Color::White),
+        std::make_shared<Rook>(Color::White)
+    };
+
+    std::vector<std::shared_ptr<Piece>> blackBack = {
+        std::make_shared<Rook>(Color::Black),
+        std::make_shared<Knight>(Color::Black),
+        std::make_shared<Bishop>(Color::Black),
+        std::make_shared<Queen>(Color::Black),
+        std::make_shared<King>(Color::Black),
+        std::make_shared<Bishop>(Color::Black),
+        std::make_shared<Knight>(Color::Black),
+        std::make_shared<Rook>(Color::Black)
+    };
+
+    for (int col = 0; col < 8; ++col) {
+        setPieceAt(Position(0, col), whiteBack[col]);
+        setPieceAt(Position(7, col), blackBack[col]);
+    }
+    
+    std::cout << "Board setup complete. Pieces placed:" << std::endl;
+    for (int row = 0; row < 8; ++row) {
+        for (int col = 0; col < 8; ++col) {
+            auto piece = getPieceAt({row, col});
+            if (piece) {
+                std::cout << "  (" << row << "," << col << "): " << piece->symbol() << std::endl;
+            }
+        }
+    }
+}
+
+bool Board::isCheck(Color color) const {
+    Position kingPos(-1, -1);
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position pos(r, c);
+            auto piece = getPieceAt(pos);
+            if (piece && piece->getType() == PieceType::King && piece->getColor() == color)
+                kingPos = pos;
+        }
+    }
+
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position attackerPos(r, c);
+            auto attacker = getPieceAt(attackerPos);
+            if (attacker && attacker->getColor() != color) {
+                if (attacker->isValidMove(attackerPos, kingPos, *this))
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+}
+
+
+
+================================================================================
+FILE: game/src/domain/game.cpp
+================================================================================
+
+#include "domain/pieces/movable_piece.hpp"
+#include "domain/pieces/pawn.hpp"
+#include "domain/pieces/rook.hpp"
+#include "domain/pieces/knight.hpp"
+#include "domain/pieces/bishop.hpp"
+#include "domain/pieces/queen.hpp"
+#include "domain/game.hpp"
+#include "infrastructure/players/network_player.hpp"
+#include <SFML/Audio.hpp>
+
+
+namespace chess {
+
+Game::Game() : currentTurn(Color::White), result(GameResult::InProgress) {
+    std::cout << "Game constructor called" << std::endl;
+    board.setupInitialPosition();
+    std::cout << "Board setup complete" << std::endl;
+    try {
+        loadSounds();
+        std::cout << "Sounds loaded successfully" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to load sounds: " << e.what() << std::endl;
+    }
+}
+
+void Game::loadSounds() {
+    if (!soundBuffers["checkmate_win"].loadFromFile("assets/sounds/checkmate_win.wav")) {
+        throw std::runtime_error("Failed to load checkmate_win.wav");
+    }
+    if (!soundBuffers["checkmate_loss"].loadFromFile("assets/sounds/checkmate_loss.wav")) {
+        throw std::runtime_error("Failed to load checkmate_loss.wav");
+    }
+    if (!soundBuffers["game_start"].loadFromFile("assets/sounds/game_start.wav")) {
+        throw std::runtime_error("Failed to load game_start.wav");
+    }
+    if (!soundBuffers["move"].loadFromFile("assets/sounds/move.wav")) {
+        throw std::runtime_error("Failed to load move.wav sound file");
+    }
+    if (!soundBuffers["capture"].loadFromFile("assets/sounds/capture.wav")) {
+        throw std::runtime_error("Failed to load capture.wav sound file");
+    }
+    if (!soundBuffers["castle"].loadFromFile("assets/sounds/castle.wav")) {
+        throw std::runtime_error("Failed to load castle.wav sound file");
+    }
+    if (!soundBuffers["check"].loadFromFile("assets/sounds/check.wav")) {
+        throw std::runtime_error("Failed to load check.wav sound file");
+    }
+    if (!soundBuffers["stalemate"].loadFromFile("assets/sounds/stalemate.wav")) {
+        throw std::runtime_error("Failed to load stalemate.wav sound file");
+    }
+    if (!soundBuffers["promote"].loadFromFile("assets/sounds/promote.wav")) {
+        throw std::runtime_error("Failed to load promote.wav sound file");
+    }
+
+    sounds.emplace("game_start", sf::Sound(soundBuffers["game_start"]));
+    sounds.emplace("move", sf::Sound(soundBuffers["move"]));
+    sounds.emplace("capture", sf::Sound(soundBuffers["capture"]));
+    sounds.emplace("castle", sf::Sound(soundBuffers["castle"]));
+    sounds.emplace("check", sf::Sound(soundBuffers["check"]));
+    sounds.emplace("stalemate", sf::Sound(soundBuffers["stalemate"]));
+    sounds.emplace("promote", sf::Sound(soundBuffers["promote"]));
+    sounds.emplace("checkmate_win", sf::Sound(soundBuffers["checkmate_win"]));
+    sounds.emplace("checkmate_loss", sf::Sound(soundBuffers["checkmate_loss"]));
+}
+
+bool Game::playTurn(Position from, Position to) {
+    if (result != GameResult::InProgress) return false;
+    if (!whitePlayer || !blackPlayer) throw std::runtime_error("Players not set in Game");
+    auto& currentPlayer = (currentTurn == Color::White) ? whitePlayer : blackPlayer;
+    
+    auto targetBeforeMove = board.getPieceAt(to);
+    bool isDiagonalEnPassant =
+        board.getPieceAt(from) && board.getPieceAt(from)->getType() == PieceType::Pawn &&
+        board.isEmpty(to) &&
+        std::abs(from.col - to.col) == 1 &&
+        std::abs(from.row - to.row) == 1;
+    bool isCapture = (targetBeforeMove && targetBeforeMove->getColor() != currentTurn) || isDiagonalEnPassant;
+
+    // For network games, the server is the source of truth, so we don't re-validate the move.
+    // For local games, the HumanPlayer's makeMove already validates.
+    if (dynamic_cast<NetworkPlayer*>(currentPlayer.get())) {
+        board.movePiece(from, to);
+    } else {
+        bool success = currentPlayer->makeMove(board, from, to);
+        if (!success) return false;
+    }
+
+    auto movedPiece = board.getPieceAt(to);
+    auto movable = std::dynamic_pointer_cast<MovablePiece>(movedPiece);
+    if (movable) {
+        movable->markMoved();
+    }
+
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            auto p = board.getPieceAt(Position(r, c));
+            if (p && p->getType() == PieceType::Pawn) {
+                auto pawn = std::dynamic_pointer_cast<Pawn>(p);
+                if (pawn) pawn->setEnPassantCapturable(false);
+            }
+        }
+    }
+
+    if (movedPiece && movedPiece->getType() == PieceType::Pawn && std::abs(to.row - from.row) == 2) {
+        auto pawn = std::dynamic_pointer_cast<Pawn>(movedPiece);
+        if (pawn) pawn->setEnPassantCapturable(true);
+    }
+
+    if (movedPiece && movedPiece->getType() == PieceType::King && std::abs(to.col - from.col) == 2) {
+        int rookFromCol = (to.col > from.col) ? 7 : 0;
+        int rookToCol   = (to.col > from.col) ? to.col - 1 : to.col + 1;
+
+        Position rookFrom(to.row, rookFromCol);
+        Position rookTo(to.row, rookToCol);
+
+        board.movePiece(rookFrom, rookTo);
+
+        auto rook = board.getPieceAt(rookTo);
+        auto rookMovable = std::dynamic_pointer_cast<MovablePiece>(rook);
+        if (rookMovable) rookMovable->markMoved();
+    }
+
+    auto movedPieceAfter = board.getPieceAt(to);
+    bool isCastling = movedPieceAfter && movedPieceAfter->getType() == PieceType::King && std::abs(to.col - from.col) == 2;
+
+    Color opponent = getOtherColor(currentTurn);
+    bool check = board.isCheck(opponent);
+    bool moves = hasValidMove(opponent);
+
+    std::string soundToPlay;
+
+    if (!moves && check) {
+        result = (currentTurn == Color::White) ? GameResult::WhiteWins : GameResult::BlackWins;
+        soundToPlay = (result == GameResult::WhiteWins) ? "checkmate_win" : "checkmate_loss";
+    } else if (!moves && !check) {
+        result = GameResult::Stalemate;
+        soundToPlay = "stalemate";
+    } else {
+        if (isInsufficientMaterial()) {
+            result = GameResult::Stalemate;
+            soundToPlay = "stalemate";
+        } else {
+            currentTurn = opponent;
+            if (check) soundToPlay = "check";
+            else if (isCastling) soundToPlay = "castle";
+            else if (isCapture) soundToPlay = "capture";
+            else soundToPlay = "move";
+        }
+    }
+
+    playSound(soundToPlay);
+
+    return true;
+}
+
+void Game::aiAutoMove() {
+    if (result != GameResult::InProgress || currentTurn != Color::Black) return;
+    if (!blackPlayer) throw std::runtime_error("Black player not set in Game");
+
+    Position from(-1, -1), to(-1, -1);
+    blackPlayer->makeMove(board, from, to);
+
+    Color opponent = getOtherColor(currentTurn);
+    bool check = board.isCheck(opponent);
+    bool moves = hasValidMove(opponent);
+
+    if (!moves && check) {
+        result = GameResult::BlackWins;
+    } else if (!moves && !check) {
+        result = GameResult::Stalemate;
+    } else {
+        currentTurn = opponent;
+    }
+}
+
+Board& Game::getBoard() {
+    return board;
+}
+
+const Board& Game::getBoard() const {
+    return board;
+}
+
+Color Game::getCurrentTurn() const {
+    return currentTurn;
+}
+
+GameResult Game::getResult() const {
+    return result;
+}
+
+bool Game::isGameOver() const {
+    return result != GameResult::InProgress;
+}
+
+bool Game::hasValidMove(Color color) {
+    for (int r1 = 0; r1 < 8; ++r1) {
+        for (int c1 = 0; c1 < 8; ++c1) {
+            Position from(r1, c1);
+            auto piece = board.getPieceAt(from);
+            if (!piece || piece->getColor() != color) continue;
+
+            for (int r2 = 0; r2 < 8; ++r2) {
+                for (int c2 = 0; c2 < 8; ++c2) {
+                    Position to(r2, c2);
+                    if (piece->isValidMove(from, to, board)) {
+                        Board copy = board.clone();
+                        copy.movePiece(from, to);
+                        bool stillInCheck = isCheckOnBoard(copy, color);
+                        if (!stillInCheck) return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool Game::isWhiteHuman() const {
+    return dynamic_cast<HumanPlayer*>(whitePlayer.get()) != nullptr;
+}
+
+bool Game::isBlackHuman() const {
+    return dynamic_cast<HumanPlayer*>(blackPlayer.get()) != nullptr;
+}
+
+bool Game::isCheckOnBoard(const Board& b, Color color) const {
+    Position kingPos(-1, -1);
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position pos(r, c);
+            auto piece = b.getPieceAt(pos);
+            if (piece && piece->getType() == PieceType::King && piece->getColor() == color)
+                kingPos = pos;
+        }
+    }
+
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position attackerPos(r, c);
+            auto attacker = b.getPieceAt(attackerPos);
+            if (attacker && attacker->getColor() != color) {
+                if (attacker->isValidMove(attackerPos, kingPos, b))
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Game::isMoveLegal(Position from, Position to) {
+    Board copy = board.clone();
+    auto piece = copy.getPieceAt(from);
+    if (!piece || !piece->isValidMove(from, to, copy)) return false;
+
+    copy.movePiece(from, to);
+    return !isCheckOnBoard(copy, piece->getColor());
+}
+
+bool Game::isInsufficientMaterial() const {
+    std::vector<std::shared_ptr<Piece>> whitePieces;
+    std::vector<std::shared_ptr<Piece>> blackPieces;
+    std::vector<Position> whiteBishopSquares;
+    std::vector<Position> blackBishopSquares;
+
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position pos(r, c);
+            auto piece = board.getPieceAt(pos);
+            if (!piece) continue;
+
+            if (piece->getColor() == Color::White) {
+                whitePieces.push_back(piece);
+                if (piece->getType() == PieceType::Bishop) whiteBishopSquares.push_back(pos);
+            } else {
+                blackPieces.push_back(piece);
+                if (piece->getType() == PieceType::Bishop) blackBishopSquares.push_back(pos);
+            }
+        }
+    }
+
+    auto isOnlyKing = [](const std::vector<std::shared_ptr<Piece>>& pieces) {
+        return pieces.size() == 1 && pieces[0]->getType() == PieceType::King;
+    };
+
+    auto isKingAndMinor = [](const std::vector<std::shared_ptr<Piece>>& pieces) {
+        if (pieces.size() != 2) return false;
+        int countKing = 0, countMinor = 0;
+        for (const auto& p : pieces) {
+            if (p->getType() == PieceType::King) countKing++;
+            if (p->getType() == PieceType::Bishop || p->getType() == PieceType::Knight) countMinor++;
+        }
+        return countKing == 1 && countMinor == 1;
+    };
+
+    // king vs king
+    if (isOnlyKing(whitePieces) && isOnlyKing(blackPieces)) return true;
+
+    // king and bishop/knight vs king
+    if ((isKingAndMinor(whitePieces) && isOnlyKing(blackPieces)) ||
+        (isOnlyKing(whitePieces) && isKingAndMinor(blackPieces))) return true;
+
+    // king and bishop vs king and bishop on same color squares
+    if (whitePieces.size() == 2 && blackPieces.size() == 2 &&
+        whiteBishopSquares.size() == 1 && blackBishopSquares.size() == 1) {
+        auto whiteSq = whiteBishopSquares[0];
+        auto blackSq = blackBishopSquares[0];
+
+        bool whiteIsLight = (whiteSq.row + whiteSq.col) % 2 == 0;
+        bool blackIsLight = (blackSq.row + blackSq.col) % 2 == 0;
+
+        if (whiteIsLight == blackIsLight) return true;
+    }
+
+    return false;
+}
+
+void Game::playSound(const std::string& name) {
+    auto it = sounds.find(name);
+    if (it != sounds.end()) {
+        it->second.play();
+    }
+}
+
+void Game::finalizePromotion(Position pos, PieceType newType) {
+    Color color = board.getPieceAt(pos)->getColor();
+
+    // replace pawn with the new piece
+    std::shared_ptr<Piece> newPiece;
+    switch (newType) {
+        case PieceType::Rook: newPiece = std::make_shared<Rook>(color); break;
+        case PieceType::Knight: newPiece = std::make_shared<Knight>(color); break;
+        case PieceType::Bishop: newPiece = std::make_shared<Bishop>(color); break;
+        case PieceType::Queen:
+        default: newPiece = std::make_shared<Queen>(color); break;
+    }
+
+    board.setPieceAt(pos, newPiece);
+
+    // playSound("promote");
+
+    //determine game state after promotion
+    Color opponent = getOtherColor(color);
+    bool check = board.isCheck(opponent);
+    bool moves = hasValidMove(opponent);
+
+    std::string soundToPlay;
+
+    if (!moves && check) {
+        result = (color == Color::White) ? GameResult::WhiteWins : GameResult::BlackWins;
+        soundToPlay = (result == GameResult::WhiteWins) ? "checkmate_win" : "checkmate_loss";
+    } else if (!moves && !check) {
+        result = GameResult::Stalemate;
+        soundToPlay = "stalemate";
+    } else if (check) {
+        soundToPlay = "check";
+    } else {
+        soundToPlay = "promote";
+    }
+
+    playSound(soundToPlay);
+}
+
+void Game::setWhitePlayer(std::unique_ptr<Player> player) {
+    whitePlayer = std::move(player);
+}
+void Game::setBlackPlayer(std::unique_ptr<Player> player) {
+    blackPlayer = std::move(player);
+}
+Player* Game::getCurrentPlayer() {
+    return (currentTurn == Color::White) ? whitePlayer.get() : blackPlayer.get();
+}
+
+}
+
+
+
+================================================================================
+FILE: game/src/domain/pieces/bishop.cpp
+================================================================================
+
+#include "domain/pieces/bishop.hpp"
+#include "domain/board.hpp"
+
+namespace chess {
+
+bool Bishop::isValidMove(const Position& from, const Position& to, const Board& board) const {
+    int rowDiff = std::abs(to.row - from.row);
+    int colDiff = std::abs(to.col - from.col);
+    if (rowDiff != colDiff) return false;
+
+    int rowDir = (to.row - from.row) > 0 ? 1 : -1;
+    int colDir = (to.col - from.col) > 0 ? 1 : -1;
+
+    for (int i = 1; i < rowDiff; ++i) {
+        int r = from.row + i * rowDir;
+        int c = from.col + i * colDir;
+        if (!board.isEmpty(Position(r, c))) return false;
+    }
+
+    auto target = board.getPieceAt(to);
+    return !target || target->getColor() != color;
+}
+
+}
+
+
+================================================================================
+FILE: game/src/domain/pieces/king.cpp
+================================================================================
+
+#include "domain/pieces/king.hpp"
+#include "domain/board.hpp"
+
+namespace chess {
+
+bool King::isValidMove(const Position& from, const Position& to, const Board& board) const {
+    int rowDiff = std::abs(to.row - from.row);
+    int colDiff = std::abs(to.col - from.col);
+
+    if (rowDiff <= 1 && colDiff <= 1) {
+        auto target = board.getPieceAt(to);
+        return !target || target->getColor() != color;
+    }
+
+    if (!hasMovedAlready() && from.row == to.row && colDiff == 2) {
+        int direction = (to.col > from.col) ? 1 : -1;
+        int rookCol = (direction == 1) ? 7 : 0;
+        Position rookPos(from.row, rookCol);
+        auto rook = board.getPieceAt(rookPos);
+
+        if (rook && rook->getType() == PieceType::Rook && rook->getColor() == color) {
+            auto rookMovable = std::dynamic_pointer_cast<MovablePiece>(rook);
+            if (!rookMovable || rookMovable->hasMovedAlready()) return false;
+
+            // check all squares between king and rook are empty
+            for (int col = from.col + direction; col != rookCol; col += direction) {
+                if (!board.isEmpty(Position(from.row, col))) return false;
+            }
+
+            // ensure path is not under check
+            for (int step = 0; step <= 2; ++step) {
+                Position intermediate(from.row, from.col + step * direction);
+                Board tempBoard = board.clone();
+                tempBoard.movePiece(from, intermediate);
+
+                // check if king would still be in check after this move
+                if (tempBoard.getPieceAt(intermediate) &&
+                    tempBoard.getPieceAt(intermediate)->getType() == PieceType::King &&
+                    tempBoard.isCheck(color)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void King::markMoved() { 
+    hasMoved = true;
+}
+
+bool King::hasMovedAlready() const {
+    return hasMoved; 
+}
+
+}
+
+
+================================================================================
+FILE: game/src/domain/pieces/knight.cpp
+================================================================================
+
+#include "domain/pieces/knight.hpp"
+#include "domain/board.hpp"
+
+namespace chess {
+
+bool Knight::isValidMove(const Position& from, const Position& to, const Board& board) const {
+    int rowDiff = std::abs(to.row - from.row);
+    int colDiff = std::abs(to.col - from.col);
+    if (!((rowDiff == 2 && colDiff == 1) || (rowDiff == 1 && colDiff == 2)))
+        return false;
+
+    auto target = board.getPieceAt(to);
+    return !target || target->getColor() != color;
+}
+
+}
+
+
+================================================================================
+FILE: game/src/domain/pieces/pawn.cpp
+================================================================================
+
+#include "domain/pieces/pawn.hpp"
+#include "domain/board.hpp"
+
+namespace chess {
+
+bool Pawn::isValidMove(const Position& from, const Position& to, const Board& board) const {
+    int direction = (color == Color::White) ? 1 : -1;
+    int startRow = (color == Color::White) ? 1 : 6;
+
+    int rowDiff = to.row - from.row;
+    int colDiff = std::abs(to.col - from.col);
+
+    if (colDiff == 0) {
+        if (rowDiff == direction && board.isEmpty(to)) return true;
+        if (from.row == startRow && rowDiff == 2 * direction) {
+            Position intermediate(from.row + direction, from.col);
+            return board.isEmpty(intermediate) && board.isEmpty(to);
+        }
+    }
+
+    if (colDiff == 1 && rowDiff == direction) {
+        auto target = board.getPieceAt(to);
+        if (target) {
+            return target->getColor() != color;
+        }
+
+        // en passant
+        Position adjacent(from.row, to.col);
+        auto adjacentPawn = board.getPieceAt(adjacent);
+        if (adjacentPawn &&
+            adjacentPawn->getType() == PieceType::Pawn &&
+            adjacentPawn->getColor() != color) {
+            auto pawnPtr = std::dynamic_pointer_cast<Pawn>(adjacentPawn);
+            if (pawnPtr && pawnPtr->isEnPassantCapturable() && board.isEmpty(to)) {
+                return true;
+            }
+        }
+
+    }
+
+    return false;
+}
+
+}
+
+
+
+================================================================================
+FILE: game/src/domain/pieces/queen.cpp
+================================================================================
+
+#include "domain/pieces/queen.hpp"
+#include "domain/board.hpp"
+#include "domain/pieces/rook.hpp"
+#include "domain/pieces/bishop.hpp"
+
+namespace chess {
+
+bool Queen::isValidMove(const Position& from, const Position& to, const Board& board) const {
+    int rowDiff = std::abs(to.row - from.row);
+    int colDiff = std::abs(to.col - from.col);
+
+    int rowDir = (to.row - from.row) == 0 ? 0 : ((to.row - from.row) > 0 ? 1 : -1);
+    int colDir = (to.col - from.col) == 0 ? 0 : ((to.col - from.col) > 0 ? 1 : -1);
+
+    // Not a straight or diagonal line
+    if (from.row != to.row && from.col != to.col && rowDiff != colDiff)
+        return false;
+
+    int r = from.row + rowDir;
+    int c = from.col + colDir;
+
+    while (r != to.row || c != to.col) {
+        if (!board.isEmpty(Position(r, c)))
+            return false;
+        r += rowDir;
+        c += colDir;
+    }
+
+    auto target = board.getPieceAt(to);
+    return !target || target->getColor() != color;
+}
+
+}
+
+
+================================================================================
+FILE: game/src/domain/pieces/rook.cpp
+================================================================================
+
+#include "domain/pieces/rook.hpp"
+#include "domain/board.hpp"
+
+namespace chess {
+
+bool Rook::isValidMove(const Position& from, const Position& to, const Board& board) const {
+    if (from.row != to.row && from.col != to.col) return false;
+
+    int rowDir = (to.row - from.row) != 0 ? (to.row - from.row) / std::abs(to.row - from.row) : 0;
+    int colDir = (to.col - from.col) != 0 ? (to.col - from.col) / std::abs(to.col - from.col) : 0;
+
+    Position check = from;
+    check.row += rowDir;
+    check.col += colDir;
+
+    while (check != to) {
+        if (!board.isEmpty(check)) return false;
+        check.row += rowDir;
+        check.col += colDir;
+    }
+
+    auto target = board.getPieceAt(to);
+    return !target || target->getColor() != color;
+}
+
+void Rook::markMoved() { 
+    hasMoved = true;
+}
+
+bool Rook::hasMovedAlready() const {
+    return hasMoved; 
+}
+
+
+}
+
+
+================================================================================
+FILE: game/src/gui/board_view.cpp
+================================================================================
+
+#include "gui/board_view.hpp"
+#include <SFML/Graphics.hpp>
+#include <domain/board.hpp>
+#include <domain/piece.hpp>
+#include <array>
+#include <iostream>
+#include "gui/widgets/sprite_piece.hpp"
+#include "gui/texture_manager.hpp"
+
+namespace chess {
+
+BoardView::BoardView(const sf::Font& font, float tileSize)
+    : tileSize_(tileSize), font_(font) {}
+
+void BoardView::draw(sf::RenderWindow& window, const Board& board) const {
+    static int drawCount = 0;
+    drawCount++;
+    if (drawCount == 1) {
+        std::cout << "BoardView::draw called for the first time" << std::endl;
+    }
+    
+    // Draw chessboard background
+    static sf::Texture boardTexture;
+    static bool boardTextureLoaded = false;
+    
+    if (!boardTextureLoaded) {
+        if (boardTexture.loadFromFile("assets/images/board.png")) {
+            boardTextureLoaded = true;
+            std::cout << "Board texture loaded successfully" << std::endl;
+        } else {
+            std::cout << "Failed to load board texture, using fallback" << std::endl;
+        }
+    }
+    
+    if (boardTextureLoaded) {
+        sf::Sprite boardSprite(boardTexture);
+        boardSprite.setScale(sf::Vector2f(tileSize_ * 8 / boardTexture.getSize().x, tileSize_ * 8 / boardTexture.getSize().y));
+        window.draw(boardSprite);
+    } else {
+        // Fallback: Draw chessboard squares
+        for (int row = 0; row < 8; ++row) {
+            for (int col = 0; col < 8; ++col) {
+                sf::RectangleShape square(sf::Vector2f(tileSize_, tileSize_));
+                square.setPosition({col * tileSize_, row * tileSize_});
+                bool isLight = (row + col) % 2 == 0;
+                square.setFillColor(isLight ? sf::Color(240, 217, 181) : sf::Color(181, 136, 99));
+                window.draw(square);
+            }
+        }
+    }
+    
+    // Draw pieces using sprites (flip board so white is at bottom)
+    static int pieceCount = 0;
+    for (int row = 0; row < 8; ++row) {
+        for (int col = 0; col < 8; ++col) {
+            const Piece* piece = board.getPieceAt({row, col}).get();
+            if (piece) {
+                pieceCount++;
+                if (drawCount == 1) {
+                    std::cout << "Rendering piece " << piece->symbol() << " at (" << row << ", " << col << ")" << std::endl;
+                }
+                std::string imagePath = getImagePath(*piece);
+                try {
+                    sf::Sprite pieceSprite(TextureManager::getTexture(imagePath));
+                    // Flip the board: row 0 becomes row 7, row 1 becomes row 6, etc.
+                    int displayRow = 7 - row;
+                    pieceSprite.setPosition(sf::Vector2f(col * tileSize_, displayRow * tileSize_));
+                    pieceSprite.setScale(sf::Vector2f(tileSize_ / pieceSprite.getTexture().getSize().x, 
+                                                    tileSize_ / pieceSprite.getTexture().getSize().y));
+                    window.draw(pieceSprite);
+                } catch (const std::runtime_error& e) {
+                    std::cout << "Failed to load piece texture: " << imagePath << " - " << e.what() << std::endl;
+                    // Fallback to text if image loading fails
+                    sf::Text pieceText(font_);
+                    pieceText.setCharacterSize(static_cast<unsigned int>(tileSize_ * 0.7f));
+                    pieceText.setFillColor(piece->getColor() == Color::White ? sf::Color::White : sf::Color::Black);
+                    pieceText.setString(std::string(1, piece->symbol()));
+                    // Flip the board for text too
+                    int displayRow = 7 - row;
+                    pieceText.setPosition(sf::Vector2f(
+                        col * tileSize_ + tileSize_ * 0.2f,
+                        displayRow * tileSize_ + tileSize_ * 0.05f
+                    ));
+                    window.draw(pieceText);
+                }
+            }
+        }
+    }
+    if (drawCount == 1) {
+        std::cout << "Total pieces rendered: " << pieceCount << std::endl;
+    }
+}
+
+std::pair<int, int> BoardView::screenToBoard(const sf::Vector2i& mousePos) const {
+    int col = mousePos.x / static_cast<int>(tileSize_);
+    int displayRow = mousePos.y / static_cast<int>(tileSize_);
+    if (displayRow < 0 || displayRow >= 8 || col < 0 || col >= 8) return {-1, -1};
+    // Flip the row back to board coordinates
+    int row = 7 - displayRow;
+    return {row, col};
+}
+
+sf::Vector2f BoardView::boardToScreen(int row, int col) const {
+    // Flip the row for display
+    int displayRow = 7 - row;
+    return sf::Vector2f(col * tileSize_, displayRow * tileSize_);
+}
+
+std::string BoardView::getImagePath(const Piece& piece) const {
+    std::string color = (piece.getColor() == Color::White) ? "white" : "black";
+    std::string type;
+    switch (piece.getType()) {
+        case PieceType::Pawn: type = "pawn"; break;
+        case PieceType::Rook: type = "rook"; break;
+        case PieceType::Knight: type = "knight"; break;
+        case PieceType::Bishop: type = "bishop"; break;
+        case PieceType::Queen: type = "queen"; break;
+        case PieceType::King: type = "king"; break;
+    }
+    return "assets/images/" + color + "_" + type + ".png";
+}
+
+} // namespace chess 
+
+
+================================================================================
+FILE: game/src/gui/texture_manager.cpp
+================================================================================
+
+#include "gui/texture_manager.hpp"
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <unordered_map>
+
+namespace chess {
+
+std::unordered_map<std::string, sf::Texture> TextureManager::textures_;
+
+sf::Texture& TextureManager::getTexture(const std::string& path) {
+    auto it = textures_.find(path);
+    if (it != textures_.end()) {
+        return it->second;
+    }
+    
+    // Load new texture
+    sf::Texture texture;
+    if (!texture.loadFromFile(path)) {
+        std::cerr << "Failed to load texture: " << path << std::endl;
+        throw std::runtime_error("Failed to load texture: " + path);
+    }
+    
+    textures_[path] = texture;
+    return textures_[path];
+}
+
+void TextureManager::clearCache() {
+    textures_.clear();
+}
+
+} // namespace chess 
+
+
+================================================================================
+FILE: game/src/gui/widgets/Button.cpp
+================================================================================
+
+#include "gui/widgets/Button.hpp"
+#include <SFML/Graphics.hpp>
+
+namespace chess {
+
+Button::Button(const sf::Font& font, const std::string& text, float x, float y, float width, float height)
+    : rect(sf::Vector2f(width, height)), label(font, text, 24) {
+    rect.setPosition(sf::Vector2f(x, y));
+    rect.setFillColor(sf::Color(50, 50, 50, 200));
+    rect.setOutlineThickness(2);
+    rect.setOutlineColor(sf::Color(0, 200, 0));
+    
+    label.setFillColor(sf::Color(200, 255, 200));
+    label.setPosition(sf::Vector2f(x + 10, y + 5));
+}
+
+bool Button::handleClick(const sf::Vector2i& mousePos) {
+    if (rect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
+        if (onClick) onClick();
+        return true;
+    }
+    return false;
+}
+
+void Button::update(const sf::Vector2i& mousePos) {
+    bool isHovered = rect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos));
+    rect.setFillColor(isHovered ? sf::Color(0, 200, 0, 200) : sf::Color(50, 50, 50, 200));
+    label.setFillColor(isHovered ? sf::Color::White : sf::Color(200, 255, 200));
+}
+
+void Button::draw(sf::RenderWindow& window) const {
+    window.draw(rect);
+    window.draw(label);
+}
+
+void Button::setOnClick(std::function<void()> callback) {
+    onClick = std::move(callback);
+}
+
+} // namespace chess 
+
+
+================================================================================
+FILE: game/src/gui/widgets/sprite_piece.cpp
+================================================================================
+
+#include "gui/widgets/sprite_piece.hpp"
+#include "domain/piece.hpp"
+#include "gui/texture_manager.hpp"
+#include <SFML/Graphics.hpp>
+#include <iostream>
+
+namespace chess {
+
+SpritePiece::SpritePiece(std::shared_ptr<Piece> piece, const std::string& imagePath, float x, float y)
+    : sprite(), piece(piece) {
+    // Load texture and create sprite
+    try {
+        sf::Texture& texture = TextureManager::getTexture(imagePath);
+        sprite.setTexture(texture);
+        sprite.setPosition(sf::Vector2f(x, y));
+    } catch (const std::exception& e) {
+        // Handle texture loading failure
+        std::cerr << "Failed to load sprite texture: " << imagePath << std::endl;
+    }
+}
+
+void SpritePiece::setPosition(float x, float y) {
+    sprite.setPosition(sf::Vector2f(x, y));
+}
+
+void SpritePiece::draw(sf::RenderWindow& window) const {
+    window.draw(sprite);
+}
+
+} // namespace chess
+
+
+================================================================================
+FILE: game/src/infrastructure/ai/ai_evaluator.cpp
+================================================================================
+
+#include "infrastructure/ai/ai_evaluator.hpp"
+#include <memory>
+
+namespace chess {
+
+const double pawnTable[8][8] = {
+    {0, 0, 0, 0, 0, 0, 0, 0},
+    {5, 5, 5,-5, -5, 5, 5, 5},
+    {1, 1, 2, 3, 3, 2, 1, 1},
+    {0, 0, 0, 2, 2, 0, 0, 0},
+    {1, 1, 1, -2, -2, 1, 1, 1},
+    {1, 2, 2, -2, -2, 2, 2, 1},
+    {5, 5, 5, -5, -5, 5, 5, 5},
+    {0, 0, 0, 0, 0, 0, 0, 0}
+};
+
+const double knightTable[8][8] = {
+    {-5,-4,-3,-3,-3,-3,-4,-5},
+    {-4,-2, 0, 0, 0, 0,-2,-4},
+    {-3, 0, 1, 1.5, 1.5, 1, 0,-3},
+    {-3, 0.5, 1.5, 2, 2, 1.5, 0.5,-3},
+    {-3, 0, 1.5, 2, 2, 1.5, 0,-3},
+    {-3, 0.5, 1, 1.5, 1.5, 1, 0.5,-3},
+    {-4,-2, 0, 0.5, 0.5, 0, -2,-4},
+    {-5,-4,-3,-3,-3,-3,-4,-5}
+};
+
+const double bishopTable[8][8] = {
+    {-2,-1,-1,-1,-1,-1,-1,-2},
+    {-1, 0, 0, 0, 0, 0, 0,-1},
+    {-1, 0, 0.5, 1, 1, 0.5, 0,-1},
+    {-1, 0.5, 0.5, 1, 1, 0.5, 0.5,-1},
+    {-1, 0, 1, 1, 1, 1, 0,-1},
+    {-1, 1, 1, 1, 1, 1, 1,-1},
+    {-1, 0.5, 0, 0, 0, 0, 0.5,-1},
+    {-2,-1,-1,-1,-1,-1,-1,-2}
+};
+
+const double rookTable[8][8] = {
+    {0, 0, 0, 0, 0, 0, 0, 0},
+    {0.5, 1, 1, 1, 1, 1, 1, 0.5},
+    {-0.5, 0, 0, 0, 0, 0, 0, -0.5},
+    {-0.5, 0, 0, 0, 0, 0, 0, -0.5},
+    {-0.5, 0, 0, 0, 0, 0, 0, -0.5},
+    {-0.5, 0, 0, 0, 0, 0, 0, -0.5},
+    {-0.5, 0, 0, 0, 0, 0, 0, -0.5},
+    {0, 0, 0, 0.5, 0.5, 0, 0, 0}
+};
+
+const double queenTable[8][8] = {
+    {-2,-1,-1, -0.5, -0.5,-1,-1,-2},
+    {-1, 0, 0, 0, 0, 0, 0,-1},
+    {-1, 0, 0.5, 0.5, 0.5, 0.5, 0,-1},
+    {-0.5, 0, 0.5, 0.5, 0.5, 0.5, 0,-0.5},
+    {0, 0, 0.5, 0.5, 0.5, 0.5, 0, -0.5},
+    {-1, 0.5, 0.5, 0.5, 0.5, 0.5, 0,-1},
+    {-1, 0, 0.5, 0, 0, 0, 0,-1},
+    {-2,-1,-1, -0.5, -0.5,-1,-1,-2}
+};
+
+const double kingTable[8][8] = {
+    {-3,-4,-4,-5,-5,-4,-4,-3},
+    {-3,-4,-4,-5,-5,-4,-4,-3},
+    {-3,-4,-4,-5,-5,-4,-4,-3},
+    {-3,-4,-4,-5,-5,-4,-4,-3},
+    {-2,-3,-3,-4,-4,-3,-3,-2},
+    {-1,-2,-2,-2,-2,-2,-2,-1},
+    {2, 2, 0, 0, 0, 0, 2, 2},
+    {2, 3, 1, 0, 0, 1, 3, 2}
+};
+
+int pieceValue(PieceType type) {
+    switch (type) {
+        case PieceType::Pawn: return 10;
+        case PieceType::Knight: return 30;
+        case PieceType::Bishop: return 30;
+        case PieceType::Rook: return 50;
+        case PieceType::Queen: return 90;
+        case PieceType::King: return 900;
+        default: return 0;
+    }
+}
+
+int evaluateBoard(const Board& board, Color aiColor) {
+    int score = 0;
+
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position pos(r, c);
+            auto piece = board.getPieceAt(pos);
+            if (!piece) continue;
+
+            int base = pieceValue(piece->getType());
+            int modifier = (piece->getColor() == aiColor) ? 1 : -1;
+
+            // Mirror row index if black so table aligns
+            int row = (piece->getColor() == Color::White) ? r : 7 - r;
+            int col = c;
+
+            score += base * modifier;
+
+            switch (piece->getType()) {
+                case PieceType::Pawn:
+                    score += modifier * pawnTable[row][col];
+                    break;
+                case PieceType::Knight:
+                    score += modifier * knightTable[row][col];
+                    break;
+                case PieceType::Bishop:
+                    score += modifier * bishopTable[row][col];
+                    break;
+                case PieceType::Rook:
+                    score += modifier * rookTable[row][col];
+                    break;
+                case PieceType::Queen:
+                    score += modifier * queenTable[row][col];
+                    break;
+                case PieceType::King: {
+                    score += modifier * kingTable[row][col];
+
+                    // simple king safety
+                    int defenders = 0;
+                    for (int dr = -1; dr <= 1; ++dr) {
+                        for (int dc = -1; dc <= 1; ++dc) {
+                            int nr = r + dr, nc = c + dc;
+                            if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                                auto neighbor = board.getPieceAt(Position(nr, nc));
+                                if (neighbor && neighbor->getColor() == piece->getColor())
+                                    defenders++;
+                            }
+                        }
+                    }
+                    score += modifier * defenders * 2;
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+
+    return score;
+}
+
+
+}
+
+
+================================================================================
+FILE: game/src/infrastructure/network/websocket_client.cpp
+================================================================================
+
+#include "infrastructure/network/websocket_client.hpp"
+#include <iostream>
+#include "utils/utils.hpp"
+
+namespace chess {
+
+WebSocketClient::WebSocketClient() : connected(false) {
+    client.init_asio();
+    client.set_open_handler([this](connection_hdl hdl) { this->onOpen(hdl); });
+    client.set_message_handler([this](connection_hdl hdl, auto msg) { this->onMessage(hdl, msg); });
+    client.set_close_handler([this](connection_hdl hdl) { this->onClose(hdl); });
+}
+
+WebSocketClient::~WebSocketClient() {
+    close();
+    if (clientThread.joinable()) clientThread.join();
+}
+
+void WebSocketClient::connect(const std::string& uri) {
+    websocketpp::lib::error_code ec;
+    auto con = client.get_connection(uri, ec);
+    if (ec) {
+        std::cerr << "Connection error: " << ec.message() << std::endl;
+        return;
+    }
+    connection = con->get_handle();
+    client.connect(con);
+    clientThread = std::thread([this]() { this->run(); });
+}
+
+void WebSocketClient::run() {
+    client.run();
+}
+
+void WebSocketClient::sendMessage(const json& message) {
+    if (connected) {
+        std::string payload = message.dump();
+        client.send(connection, payload, websocketpp::frame::opcode::text);
+    }
+}
+
+
+void WebSocketClient::onOpen(connection_hdl hdl) {
+    connected = true;
+    std::cout << "WebSocket connected!" << std::endl;
+}
+
+void WebSocketClient::onMessage(websocketpp::connection_hdl, websocketpp::config::asio_client::message_type::ptr msg) {
+    try {
+        auto payload = json::parse(msg->get_payload());
+
+        // Always deliver to messageHandler
+        if (messageHandler) {
+            messageHandler(payload);
+        }
+
+        // Only call onMoveReceived for opponentMove
+        if (payload["type"] == "opponentMove") {
+            int fromRow = payload["from"]["row"];
+            int fromCol = payload["from"]["col"];
+            int toRow   = payload["to"]["row"];
+            int toCol   = payload["to"]["col"];
+            if (onMoveReceived) {
+                onMoveReceived(Position(fromRow, fromCol), Position(toRow, toCol));
+            }
+        }
+    } catch (...) {
+        std::cerr << "Invalid JSON received.\n";
+    }
+}
+
+void WebSocketClient::onClose(connection_hdl) {
+    connected = false;
+    std::cout << "WebSocket closed." << std::endl;
+}
+
+void WebSocketClient::close() {
+    if (connected) {
+        websocketpp::lib::error_code ec;
+        client.close(connection, websocketpp::close::status::normal, "Shutdown", ec);
+    }
+}
+
+void WebSocketClient::setMoveHandler(std::function<void(Position, Position)> handler) {
+    onMoveReceived = std::move(handler);
+}
+
+void WebSocketClient::setMessageHandler(MessageHandler handler) {
+    messageHandler = std::move(handler);
+}
+
+}
+
+
+================================================================================
+FILE: game/src/infrastructure/players/ai_player.cpp
+================================================================================
+
+#include "infrastructure/players/ai_player.hpp"
+#include "domain/pieces/queen.hpp"
+#include <limits>
+#include <vector>
+
+namespace chess {
+
+bool AIPlayer::makeMove(Board& board, Position& from, Position& to) {
+    Position bestFrom(-1, -1), bestTo(-1, -1);
+    minimax(board, 3, std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), true, bestFrom, bestTo);
+
+    if (bestFrom.isValid() && bestTo.isValid()) {
+        auto piece = board.getPieceAt(bestFrom);
+        board.movePiece(bestFrom, bestTo);
+
+        if (piece && piece->getType() == PieceType::Pawn && bestTo.row == 0) {
+            board.setPieceAt(bestTo, std::make_shared<Queen>(color));
+        }
+
+        from = bestFrom;
+        to = bestTo;
+        return true;
+    }
+
+    return false;
+}
+
+int AIPlayer::minimax(Board& board, int depth, int alpha, int beta, bool maximizing, Position& bestFrom, Position& bestTo) {
+    if (depth == 0) {
+        return evaluateBoard(board, color);
+    }
+
+    int bestScore = maximizing ? std::numeric_limits<int>::min() : std::numeric_limits<int>::max();
+
+    for (int r1 = 0; r1 < 8; ++r1) {
+        for (int c1 = 0; c1 < 8; ++c1) {
+            Position from(r1, c1);
+            auto piece = board.getPieceAt(from);
+            if (!piece || piece->getColor() != (maximizing ? color : getOtherColor(color))) continue;
+
+            for (int r2 = 0; r2 < 8; ++r2) {
+                for (int c2 = 0; c2 < 8; ++c2) {
+                    Position to(r2, c2);
+                    if (!piece->isValidMove(from, to, board)) continue;
+
+                    // Simulate move
+                    auto captured = board.getPieceAt(to);
+                    board.movePiece(from, to);
+
+                    int eval = minimax(board, depth - 1, alpha, beta, !maximizing, bestFrom, bestTo);
+
+                    // Undo move
+                    board.movePiece(to, from);
+                    board.setPieceAt(to, captured);
+
+                    if (maximizing) {
+                        if (eval > bestScore) {
+                            bestScore = eval;
+                            if (depth == 3) {
+                                bestFrom = from;
+                                bestTo = to;
+                            }
+                        }
+                        alpha = std::max(alpha, eval);
+                        if (beta <= alpha) break;
+                    } else {
+                        bestScore = std::min(bestScore, eval);
+                        beta = std::min(beta, eval);
+                        if (beta <= alpha) break;
+                    }
+                }
+            }
+        }
+    }
+
+    return bestScore;
+}
+
+}
+
+
+
+================================================================================
+FILE: game/src/infrastructure/players/human_player.cpp
+================================================================================
+
+#include "infrastructure/players/human_player.hpp"
+
+namespace chess {
+
+HumanPlayer::HumanPlayer(Color c) : Player(c) {}
+
+bool HumanPlayer::makeMove(Board& board, Position& from, Position& to) {
+    if (!from.isValid() || !to.isValid()) return false;
+
+    auto piece = board.getPieceAt(from);
+    if (!piece || piece->getColor() != color) return false;
+    if (!piece->isValidMove(from, to, board)) return false;
+
+    board.movePiece(from, to);
+    return true;
+}
+
+}
+
+
+
+================================================================================
+FILE: game/src/infrastructure/players/network_player.cpp
+================================================================================
+
+#include "infrastructure/players/network_player.hpp"
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+namespace chess {
+
+NetworkPlayer::NetworkPlayer(Color color, WebSocketClient& wsClient)
+    : Player(color), client(wsClient) {
+    // The "join" message is now sent from the GUI, not here.
+}
+
+bool NetworkPlayer::makeMove(Board& board, Position& from, Position& to) {
+    if (!from.isValid() || !to.isValid()) return false;
+
+    auto piece = board.getPieceAt(from);
+    if (!piece || piece->getColor() != color) return false;
+    if (!piece->isValidMove(from, to, board)) return false;
+
+    // A network player reflects a move received from the server.
+    // We just update the board; we DO NOT send a message back.
+    board.movePiece(from, to);
+
+    return true;
+}
+
+}
+
+
+================================================================================
+FILE: game/src/main.cpp
+================================================================================
+
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include "application/game_controller.hpp"
+
+int main() {
+    try {
+        chess::GameController controller;
+        controller.run();
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << std::endl;
+        return 1;
+    }
+    
+    return 0;
+} 
+
+
+================================================================================
+FILE: game/src/utils/utils.cpp
+================================================================================
+
+#include "utils/utils.hpp"
+#include <tuple>
+
+namespace chess {
+
+bool Position::isValid() const {
+    return row >= 0 && row < 8 && col >= 0 && col < 8;
+}
+
+bool Position::operator==(const Position& other) const {
+    return row == other.row && col == other.col;
+}
+
+bool Position::operator!=(const Position& other) const {
+    return !(*this == other);
+}
+
+bool Position::operator<(const Position& other) const {
+    return std::tie(row, col) < std::tie(other.row, other.col);
+}
+
+Color getOtherColor(Color c) {
+    return (c == Color::White) ? Color::Black : Color::White;
+}
+
+}
+
+
+================================================================================
+FILE: game/tests/test_application.cpp
+================================================================================
+
+#include <cassert>
+#include <iostream>
+#include <application/game_controller.hpp>
+
+using namespace chess;
+
+void test_game_controller_state_transition() {
+    GameController controller;
+    // Simulate starting a local game and force game over
+    controller.startLocalGame();
+    // We can't fully test UI, but we can check state transitions if exposed
+    // For now, just ensure the controller can be constructed and run without crashing
+    assert(true);
+}
+
+int main() {
+    test_game_controller_state_transition();
+    std::cout << "All application tests passed!\n";
+    return 0;
+} 
+
+
+================================================================================
+FILE: game/tests/test_domain.cpp
+================================================================================
+
+#include <cassert>
+#include <iostream>
+#include <domain/board.hpp>
+#include <domain/piece.hpp>
+#include <domain/game.hpp>
+#include <utils/utils.hpp>
+
+using namespace chess;
+
+void test_board_piece_placement() {
+    Board board;
+    auto pawn = std::make_shared<Piece>(PieceType::Pawn, Color::White);
+    Position pos(1, 1);
+    board.setPieceAt(pos, pawn);
+    assert(board.getPieceAt(pos) == pawn);
+}
+
+void test_board_move_piece() {
+    Board board;
+    auto rook = std::make_shared<Piece>(PieceType::Rook, Color::White);
+    Position from(0, 0), to(0, 7);
+    board.setPieceAt(from, rook);
+    board.movePiece(from, to);
+    assert(board.getPieceAt(to) == rook);
+    assert(board.getPieceAt(from) == nullptr);
+}
+
+void test_game_over_detection() {
+    Game game;
+    // Simulate a checkmate or stalemate position if possible
+    // For now, just check that a new game is not over
+    assert(!game.isGameOver());
+}
+
+int main() {
+    test_board_piece_placement();
+    test_board_move_piece();
+    test_game_over_detection();
+    std::cout << "All domain tests passed!\n";
+    return 0;
+} 
+
+
+================================================================================
+FILE: server/src/main/java/com/devign/chessmate/ChessmateServerApplication.java
+================================================================================
+
+package com.devign.chessmate;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ChessmateServerApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ChessmateServerApplication.class, args);
+	}
+
+}
+
+
+
+================================================================================
+FILE: server/src/main/java/com/devign/chessmate/config/WebSocketConfig.java
+================================================================================
+
+package com.devign.chessmate.config;
+
+import com.devign.chessmate.socket.GameSocketHandler;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+
+@Configuration
+@EnableWebSocket
+public class WebSocketConfig implements WebSocketConfigurer {
+
+    private final GameSocketHandler gameSocketHandler;
+
+    public WebSocketConfig(GameSocketHandler gameSocketHandler) {
+        this.gameSocketHandler = gameSocketHandler;
+    }
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(gameSocketHandler, "/game").setAllowedOrigins("*");
+    }
+}
+
+
+================================================================================
+FILE: server/src/main/java/com/devign/chessmate/service/MatchmakingService.java
+================================================================================
+
+package com.devign.chessmate.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+@Service
+public class MatchmakingService {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final Queue<WebSocketSession> waitingPlayers = new ConcurrentLinkedQueue<>();
+    private final Map<String, WebSocketSession> activeSessions = new ConcurrentHashMap<>();
+    private final Map<String, String> matches = new ConcurrentHashMap<>();
+
+    public void handleMessage(WebSocketSession session, Map<String, Object> payload) throws Exception {
+        String type = (String) payload.get("type");
+
+        switch (type) {
+            case "join" -> joinQueue(session);
+            case "move" -> forwardMove(session, payload);
+        }
+    }
+
+    private void joinQueue(WebSocketSession session) throws Exception {
+        WebSocketSession opponent = waitingPlayers.poll();
+        if (opponent == null) {
+            waitingPlayers.add(session);
+        } else {
+            String player1Id = session.getId();
+            String player2Id = opponent.getId();
+
+            matches.put(player1Id, player2Id);
+            matches.put(player2Id, player1Id);
+
+            activeSessions.put(player1Id, session);
+            activeSessions.put(player2Id, opponent);
+
+            session.sendMessage(new TextMessage("{\"type\":\"start\",\"color\":\"black\",\"opponentId\":\"" + player2Id + "\"}"));
+            opponent.sendMessage(new TextMessage("{\"type\":\"start\",\"color\":\"white\",\"opponentId\":\"" + player1Id + "\"}"));
+        }
+    }
+
+    private void forwardMove(WebSocketSession session, Map<String, Object> payload) throws Exception {
+        String senderId = session.getId();
+        String receiverId = matches.get(senderId);
+        if (receiverId != null && activeSessions.containsKey(receiverId)) {
+            WebSocketSession receiver = activeSessions.get(receiverId);
+            payload.put("type", "opponentMove");
+            receiver.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
+        }
+    }
+
+    public void removePlayer(WebSocketSession session) {
+        String sessionId = session.getId();
+        waitingPlayers.remove(session);
+        String opponentId = matches.remove(sessionId);
+        if (opponentId != null) {
+            matches.remove(opponentId);
+            WebSocketSession opponent = activeSessions.remove(opponentId);
+            if (opponent != null && opponent.isOpen()) {
+                try {
+                    opponent.sendMessage(new TextMessage("{\"type\":\"gameOver\",\"winner\":\"you\"}"));
+                    opponent.close();
+                } catch (Exception ignored) {}
+            }
+        }
+        activeSessions.remove(sessionId);
+    }
+}
+
+
+================================================================================
+FILE: server/src/main/java/com/devign/chessmate/socket/GameSocketHandler.java
+================================================================================
+
+package com.devign.chessmate.socket;
+
+import com.devign.chessmate.service.MatchmakingService;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.*;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
+import com.fasterxml.jackson.core.type.TypeReference;
+
+
+@Component
+public class GameSocketHandler extends TextWebSocketHandler {
+
+    private final MatchmakingService matchmakingService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public GameSocketHandler(MatchmakingService matchmakingService) {
+        this.matchmakingService = matchmakingService;
+    }
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        System.out.println("Connection established: " + session.getId());
+    }
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        Map<String, Object> payload = objectMapper.readValue(
+            message.getPayload(),
+            new TypeReference<Map<String, Object>>() {}
+        );
+        matchmakingService.handleMessage(session, payload);
+    }
+    
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        System.out.println("Connection closed: " + session.getId());
+        matchmakingService.removePlayer(session);
+    }
+}
+
+
+================================================================================
+FILE: server/src/test/java/com/devign/chessmate/ChessmateServerApplicationTests.java
+================================================================================
+
+package com.devign.chessmate;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class ChessmateServerApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
