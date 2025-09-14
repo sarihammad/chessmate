@@ -1,6 +1,5 @@
 # Build artifacts
 build/
-cmake-build-*/
 game/build/
 server/target/
 
@@ -12,19 +11,18 @@ server/target/
 .DS_Store
 Thumbs.db
 
-# Python caches (for any tools/scripts)
-__pycache__/
-*.pyc
-
-# Logs
-*.log
-
 # CMake deps/cache
 _deps/
 CMakeFiles/
 CMakeCache.txt
 Testing/
 compile_commands.json
+
+# Logs
+*.log
+
+# Python caches
+__pycache__/
 
 # Compiled files
 *.o
