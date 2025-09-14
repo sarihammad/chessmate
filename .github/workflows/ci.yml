@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
       - name: Configure
-        run: cd game && cmake --preset dev
+        run: cd game && cmake --preset dev -DCMAKE_POLICY_VERSION_MINIMUM=3.5
       - name: Build
         run: cd game && cmake --build build/dev -j 4
       - name: Test
@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
       - name: Configure (ASAN)
-        run: cd game && cmake --preset asan
+        run: cd game && cmake --preset asan -DCMAKE_POLICY_VERSION_MINIMUM=3.5
       - name: Build (ASAN)
         run: cd game && cmake --build build/asan -j 4
       - name: Test (ASAN)
