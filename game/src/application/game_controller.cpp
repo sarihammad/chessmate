@@ -127,7 +127,7 @@ void GameController::run() {
     float btnWidth = 300, btnHeight = 60, spacing = 20;
     float startY = 300;
     for (int i = 0; i < 4; ++i) {
-        buttons.emplace_back(font, labels[static_cast<size_t>(i)], 400 - btnWidth/2, startY + static_cast<int>(i) * (btnHeight + spacing), btnWidth, btnHeight);
+        buttons.emplace_back(font, labels[static_cast<size_t>(i)], 400.f - btnWidth/2, startY + static_cast<float>(i) * (btnHeight + spacing), btnWidth, btnHeight);
     }
 
     // Set button actions

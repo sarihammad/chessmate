@@ -5,8 +5,8 @@ using json = nlohmann::json;
 
 namespace chess {
 
-NetworkPlayer::NetworkPlayer(Color color, cm::WebSocketClient& wsClient)
-    : Player(color), client(wsClient) {
+NetworkPlayer::NetworkPlayer(Color playerColor, cm::WebSocketClient& wsClient)
+    : Player(playerColor), client(wsClient) {
     // The "join" message is now sent from the GUI, not here.
     // Store reference to client for future network message handling
     (void)client; // Suppress unused variable warning

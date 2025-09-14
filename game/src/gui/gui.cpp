@@ -742,7 +742,7 @@ AppState runMainMenu(sf::RenderWindow& window, const Config& cfg) {
         Button btn{sf::RectangleShape(), sf::Text(font, labels[static_cast<size_t>(i)], 36), nullptr, false};
         btn.rect.setSize(sf::Vector2f(btnWidth, btnHeight));
         btn.rect.setOrigin({btnWidth / 2, btnHeight / 2});
-        btn.rect.setPosition({400, startY + i * (btnHeight + spacing)});
+        btn.rect.setPosition({400.f, startY + static_cast<float>(i) * (btnHeight + spacing)});
         btn.rect.setFillColor(sf::Color(30, 30, 30, 220));
         btn.rect.setOutlineThickness(3);
         btn.rect.setOutlineColor(sf::Color(0, 200, 0));
