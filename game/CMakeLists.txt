@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.24)
+
+# Set policy version for compatibility with older dependencies BEFORE project()
+set(CMAKE_POLICY_DEFAULT_CMP0000 NEW)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 project(chessmate LANGUAGES CXX)
 
 include(FetchContent)
