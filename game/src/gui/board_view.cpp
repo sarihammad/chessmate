@@ -41,7 +41,7 @@ void BoardView::draw(sf::RenderWindow& window, const Board& board) const {
         for (int row = 0; row < 8; ++row) {
             for (int col = 0; col < 8; ++col) {
                 sf::RectangleShape square(sf::Vector2f(tileSize_, tileSize_));
-                square.setPosition({static_cast<float>(col * tileSize_), static_cast<float>(row * tileSize_)});
+                square.setPosition({static_cast<float>(col) * tileSize_, static_cast<float>(row) * tileSize_});
                 bool isLight = (row + col) % 2 == 0;
                 square.setFillColor(isLight ? sf::Color(240, 217, 181) : sf::Color(181, 136, 99));
                 window.draw(square);
@@ -64,7 +64,7 @@ void BoardView::draw(sf::RenderWindow& window, const Board& board) const {
                     sf::Sprite pieceSprite(TextureManager::getTexture(imagePath));
                     // Flip the board: row 0 becomes row 7, row 1 becomes row 6, etc.
                     int displayRow = 7 - row;
-                    pieceSprite.setPosition(sf::Vector2f(static_cast<float>(col * tileSize_), static_cast<float>(displayRow * tileSize_)));
+                    pieceSprite.setPosition(sf::Vector2f(static_cast<float>(col) * tileSize_, static_cast<float>(displayRow) * tileSize_));
                     pieceSprite.setScale(sf::Vector2f(tileSize_ / static_cast<float>(pieceSprite.getTexture().getSize().x), 
                                                     tileSize_ / static_cast<float>(pieceSprite.getTexture().getSize().y)));
                     window.draw(pieceSprite);
@@ -78,8 +78,8 @@ void BoardView::draw(sf::RenderWindow& window, const Board& board) const {
                     // Flip the board for text too
                     int displayRow = 7 - row;
                     pieceText.setPosition(sf::Vector2f(
-                        static_cast<float>(col * tileSize_) + tileSize_ * 0.2f,
-                        static_cast<float>(displayRow * tileSize_) + tileSize_ * 0.05f
+                        static_cast<float>(col) * tileSize_ + tileSize_ * 0.2f,
+                        static_cast<float>(displayRow) * tileSize_ + tileSize_ * 0.05f
                     ));
                     window.draw(pieceText);
                 }
@@ -103,7 +103,7 @@ std::pair<int, int> BoardView::screenToBoard(const sf::Vector2i& mousePos) const
 sf::Vector2f BoardView::boardToScreen(int row, int col) const {
     // Flip the row for display
     int displayRow = 7 - row;
-    return sf::Vector2f(static_cast<float>(col * tileSize_), static_cast<float>(displayRow * tileSize_));
+    return sf::Vector2f(static_cast<float>(col) * tileSize_, static_cast<float>(displayRow) * tileSize_);
 }
 
 std::string BoardView::getImagePath(const Piece& piece) const {
