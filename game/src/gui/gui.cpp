@@ -15,6 +15,8 @@
 #include "domain/pieces/queen.hpp"
 #include "infrastructure/network/websocket_client.hpp"
 #include "infrastructure/players/network_player.hpp"
+#include "infrastructure/config.hpp"
+#include "gui/gui.hpp"
 #include <vector>
 #include <functional>
 
@@ -709,11 +711,11 @@ void runGUI(sf::RenderWindow& window, cm::WebSocketClient* wsClient, bool vsAI, 
     }
 }
 
-void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
+AppState runMainMenu(sf::RenderWindow& window, const Config& cfg) {
     sf::Font font;
     if (!font.openFromFile("assets/fonts/Arial.ttf")) {
         std::cerr << "Failed to load font for main menu.\n";
-        return;
+        return AppState::Quit;
     }
 
     // Gradient background: black to green
@@ -751,8 +753,33 @@ void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
     }
 
     // Button actions
-    buttons[0].onClick = [&]() { window.clear(); window.display(); runGUI(window, nullptr, false, true); };
-    buttons[1].onClick = [&]() { window.clear(); window.display(); cm::WebSocketClient* wsClient = new cm::WebSocketClient(serverUri, 2000); wsClient->connect(serverUri); runGUI(window, wsClient, false, true); delete wsClient; };
+    buttons[0].onClick = [&]() { 
+        window.clear(); 
+        window.display(); 
+        try {
+            runGUI(window, nullptr, false, true);
+        } catch (const std::runtime_error& e) {
+            if (std::string(e.what()) == "Return to menu") {
+                // Exception will be caught by main.cpp
+                throw;
+            }
+        }
+    };
+    buttons[1].onClick = [&]() { 
+        window.clear(); 
+        window.display(); 
+        cm::WebSocketClient* wsClient = new cm::WebSocketClient(cfg.network.ws_url, cfg.network.reconnect_ms); 
+        wsClient->connect(cfg.network.ws_url); 
+        try {
+            runGUI(window, wsClient, false, true);
+        } catch (const std::runtime_error& e) {
+            if (std::string(e.what()) == "Return to menu") {
+                // Exception will be caught by main.cpp
+                throw;
+            }
+        }
+        delete wsClient; 
+    };
     buttons[2].onClick = [&]() {
         // Color selection overlay
         sf::RectangleShape overlay(sf::Vector2f(800.f, 800.f));
@@ -782,10 +809,26 @@ void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
                 if (event->is<sf::Event::MouseButtonPressed>() && event->getIf<sf::Event::MouseButtonPressed>()->button == sf::Mouse::Button::Left) {
                     sf::Vector2f moustPos(static_cast<float>(event->getIf<sf::Event::MouseButtonPressed>()->position.x), static_cast<float>(event->getIf<sf::Event::MouseButtonPressed>()->position.y));
                     if (whiteBtn.getGlobalBounds().contains(moustPos)) {
-                        window.clear(); window.display(); runGUI(window, nullptr, true, true); return;
+                        window.clear(); window.display(); 
+                        try {
+                            runGUI(window, nullptr, true, true);
+                        } catch (const std::runtime_error& e) {
+                            if (std::string(e.what()) == "Return to menu") {
+                                throw;
+                            }
+                        }
+                        return;
                     }
                     if (blackBtn.getGlobalBounds().contains(moustPos)) {
-                        window.clear(); window.display(); runGUI(window, nullptr, true, false); return;
+                        window.clear(); window.display(); 
+                        try {
+                            runGUI(window, nullptr, true, false);
+                        } catch (const std::runtime_error& e) {
+                            if (std::string(e.what()) == "Return to menu") {
+                                throw;
+                            }
+                        }
+                        return;
                     }
                 }
             }
@@ -810,13 +853,13 @@ void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
                 window.close();
-                return;
+                return AppState::Quit;
             }
             if (event->is<sf::Event::MouseButtonPressed>() && event->getIf<sf::Event::MouseButtonPressed>()->button == sf::Mouse::Button::Left) {
                 for (auto& btn : buttons) {
                     if (btn.hovered && btn.onClick) {
                         btn.onClick();
-                        return;
+                        return AppState::Game;
                     }
                 }
             }
@@ -830,6 +873,13 @@ void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
         }
         window.display();
     }
+    return AppState::Quit;
+}
+
+AppState runGame(sf::RenderWindow& window, const Config& /*cfg*/) {
+    // For now, just run the GUI and return to menu
+    runGUI(window, nullptr, false, true);
+    return AppState::Menu;
 }
 
 }
