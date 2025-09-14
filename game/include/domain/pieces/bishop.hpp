@@ -14,6 +14,10 @@ public:
     std::shared_ptr<Piece> clone() const override {
         return std::make_shared<Bishop>(*this);
     }
+    
+    std::unique_ptr<Piece> clone_unique() const override {
+        return std::make_unique<Bishop>(*this);
+    }
 
     char symbol() const override {
         return color == Color::White ? 'B' : 'b';

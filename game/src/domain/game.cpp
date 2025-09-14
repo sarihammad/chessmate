@@ -7,6 +7,8 @@
 #include "domain/game.hpp"
 #include "infrastructure/players/network_player.hpp"
 #include <SFML/Audio.hpp>
+#include <iostream>
+#include <cstdlib>
 
 
 namespace chess {
@@ -72,8 +74,8 @@ bool Game::playTurn(Position from, Position to) {
     bool isDiagonalEnPassant =
         board.getPieceAt(from) && board.getPieceAt(from)->getType() == PieceType::Pawn &&
         board.isEmpty(to) &&
-        std::abs(from.col - to.col) == 1 &&
-        std::abs(from.row - to.row) == 1;
+        abs(from.col - to.col) == 1 &&
+        abs(from.row - to.row) == 1;
     bool isCapture = (targetBeforeMove && targetBeforeMove->getColor() != currentTurn) || isDiagonalEnPassant;
 
     // For network games, the server is the source of truth, so we don't re-validate the move.
@@ -101,12 +103,12 @@ bool Game::playTurn(Position from, Position to) {
         }
     }
 
-    if (movedPiece && movedPiece->getType() == PieceType::Pawn && std::abs(to.row - from.row) == 2) {
+    if (movedPiece && movedPiece->getType() == PieceType::Pawn && abs(to.row - from.row) == 2) {
         auto pawn = std::dynamic_pointer_cast<Pawn>(movedPiece);
         if (pawn) pawn->setEnPassantCapturable(true);
     }
 
-    if (movedPiece && movedPiece->getType() == PieceType::King && std::abs(to.col - from.col) == 2) {
+    if (movedPiece && movedPiece->getType() == PieceType::King && abs(to.col - from.col) == 2) {
         int rookFromCol = (to.col > from.col) ? 7 : 0;
         int rookToCol   = (to.col > from.col) ? to.col - 1 : to.col + 1;
 
@@ -121,10 +123,10 @@ bool Game::playTurn(Position from, Position to) {
     }
 
     auto movedPieceAfter = board.getPieceAt(to);
-    bool isCastling = movedPieceAfter && movedPieceAfter->getType() == PieceType::King && std::abs(to.col - from.col) == 2;
+    bool isCastling = movedPieceAfter && movedPieceAfter->getType() == PieceType::King && abs(to.col - from.col) == 2;
 
     Color opponent = getOtherColor(currentTurn);
-    bool check = board.isCheck(opponent);
+    bool check = board.is_check(opponent);
     bool moves = hasValidMove(opponent);
 
     std::string soundToPlay;
@@ -161,7 +163,7 @@ void Game::aiAutoMove() {
     blackPlayer->makeMove(board, from, to);
 
     Color opponent = getOtherColor(currentTurn);
-    bool check = board.isCheck(opponent);
+    bool check = board.is_check(opponent);
     bool moves = hasValidMove(opponent);
 
     if (!moves && check) {
@@ -342,7 +344,7 @@ void Game::finalizePromotion(Position pos, PieceType newType) {
 
     //determine game state after promotion
     Color opponent = getOtherColor(color);
-    bool check = board.isCheck(opponent);
+    bool check = board.is_check(opponent);
     bool moves = hasValidMove(opponent);
 
     std::string soundToPlay;

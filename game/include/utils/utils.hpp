@@ -1,5 +1,6 @@
 #pragma once
 #include "domain/enums.hpp"
+#include <compare>
 
 namespace chess {
 

@@ -26,7 +26,7 @@ void GameController::createLocalPlayers() {
     game_->setBlackPlayer(std::move(black));
 }
 
-void GameController::createOnlinePlayers(WebSocketClient& wsClient) {
+void GameController::createOnlinePlayers(cm::WebSocketClient& wsClient) {
     // Instantiate a human player and a network player and set them in Game
     auto white = std::make_unique<HumanPlayer>(Color::White);
     auto black = std::make_unique<NetworkPlayer>(Color::Black, wsClient);
@@ -46,7 +46,7 @@ void GameController::createAIPlayers() {
     std::cout << "DEBUG: Players set in game" << std::endl;
 }
 
-void GameController::showGameOver(sf::RenderWindow& window, const std::string& message) {
+void GameController::showGameOver(sf::RenderWindow& /*window*/, const std::string& /*message*/) {
     state_ = AppState::Menu;
 }
 
@@ -81,7 +81,7 @@ void GameController::startOnlineGame() {
 
     // Set up WebSocket client
     std::string serverUri = "ws://localhost:8080/game"; // Or configurable
-    wsClient_ = std::make_unique<WebSocketClient>();
+    wsClient_ = std::make_unique<cm::WebSocketClient>(serverUri, 2000);
     wsClient_->connect(serverUri);
 
     // Create players
@@ -127,7 +127,7 @@ void GameController::run() {
     float btnWidth = 300, btnHeight = 60, spacing = 20;
     float startY = 300;
     for (int i = 0; i < 4; ++i) {
-        buttons.emplace_back(font, labels[i], 400 - btnWidth/2, startY + i * (btnHeight + spacing), btnWidth, btnHeight);
+        buttons.emplace_back(font, labels[static_cast<size_t>(i)], 400 - btnWidth/2, startY + static_cast<int>(i) * (btnHeight + spacing), btnWidth, btnHeight);
     }
 
     // Set button actions
@@ -218,7 +218,7 @@ void GameController::run() {
                                         // Send move to server
                                         if (wsClient_) {
                                             nlohmann::json msg = { {"type", "move"}, {"from", { {"row", from.row}, {"col", from.col} }}, {"to", { {"row", to.row}, {"col", to.col} }} };
-                                            wsClient_->sendMessage(msg);
+                                            wsClient_->send(msg.dump());
                                         }
                                     }
                                     selected = {-1, -1};

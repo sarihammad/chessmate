@@ -6,6 +6,7 @@
 #include "domain/pieces/queen.hpp"
 #include "domain/pieces/king.hpp"
 #include <iostream>
+#include <cstdlib>
 
 namespace chess {
 
@@ -15,7 +16,7 @@ Board::Board(const Board& other) {
             Position pos(r, c);
             const auto* piece = other.piece_at(pos);
             if (piece) {
-                squares_[r][c] = piece->clone();
+                squares_[static_cast<size_t>(r)][static_cast<size_t>(c)] = piece->clone_unique();
             }
         }
     }
@@ -28,9 +29,9 @@ Board& Board::operator=(const Board& other) {
                 Position pos(r, c);
                 const auto* piece = other.piece_at(pos);
                 if (piece) {
-                    squares_[r][c] = piece->clone();
+                    squares_[static_cast<size_t>(r)][static_cast<size_t>(c)] = piece->clone_unique();
                 } else {
-                    squares_[r][c].reset();
+                    squares_[static_cast<size_t>(r)][static_cast<size_t>(c)].reset();
                 }
             }
         }
@@ -40,41 +41,41 @@ Board& Board::operator=(const Board& other) {
 
 const Piece* Board::piece_at(Position pos) const noexcept {
     if (!pos.is_valid()) return nullptr;
-    return squares_[pos.row][pos.col].get();
+    return squares_[static_cast<size_t>(pos.row)][static_cast<size_t>(pos.col)].get();
 }
 
 Piece* Board::piece_at(Position pos) noexcept {
     if (!pos.is_valid()) return nullptr;
-    return squares_[pos.row][pos.col].get();
+    return squares_[static_cast<size_t>(pos.row)][static_cast<size_t>(pos.col)].get();
 }
 
 void Board::set_piece(Position pos, std::unique_ptr<Piece> piece) noexcept {
     if (pos.is_valid()) {
-        squares_[pos.row][pos.col] = std::move(piece);
+        squares_[static_cast<size_t>(pos.row)][static_cast<size_t>(pos.col)] = std::move(piece);
     }
 }
 
 void Board::move_piece(Position from, Position to) noexcept {
     if (!from.is_valid() || !to.is_valid()) return;
 
-    auto piece = std::move(squares_[from.row][from.col]);
+    auto piece = std::move(squares_[static_cast<size_t>(from.row)][static_cast<size_t>(from.col)]);
     if (!piece) return;
 
     // Handle en passant
     if (piece->getType() == PieceType::Pawn && is_empty(to) &&
-        std::abs(to.col - from.col) == 1 && std::abs(to.row - from.row) == 1) {
+        abs(to.col - from.col) == 1 && abs(to.row - from.row) == 1) {
         int capturedPawnRow = (piece->getColor() == Color::White) ? to.row - 1 : to.row + 1;
         Position capturedPos(capturedPawnRow, to.col);
         clear(capturedPos);
     }
 
-    squares_[to.row][to.col] = std::move(piece);
-    squares_[from.row][from.col].reset();
+    squares_[static_cast<size_t>(to.row)][static_cast<size_t>(to.col)] = std::move(piece);
+    squares_[static_cast<size_t>(from.row)][static_cast<size_t>(from.col)].reset();
 }
 
 void Board::clear(Position pos) noexcept {
     if (pos.is_valid()) {
-        squares_[pos.row][pos.col].reset();
+        squares_[static_cast<size_t>(pos.row)][static_cast<size_t>(pos.col)].reset();
     }
 }
 
@@ -119,7 +120,7 @@ void Board::setup_initial_position() {
     // Clear the board
     for (int r = 0; r < 8; ++r) {
         for (int c = 0; c < 8; ++c) {
-            squares_[r][c].reset();
+            squares_[static_cast<size_t>(r)][static_cast<size_t>(c)].reset();
         }
     }
     
@@ -153,8 +154,8 @@ void Board::setup_initial_position() {
     };
 
     for (int col = 0; col < 8; ++col) {
-        set_piece(Position(0, col), std::move(whiteBack[col]));
-        set_piece(Position(7, col), std::move(blackBack[col]));
+        set_piece(Position(0, col), std::move(whiteBack[static_cast<size_t>(col)]));
+        set_piece(Position(7, col), std::move(blackBack[static_cast<size_t>(col)]));
     }
     
     std::cout << "Board setup complete. Pieces placed:" << std::endl;
@@ -179,7 +180,7 @@ std::shared_ptr<Piece> Board::getPieceAt(const Position& pos) const {
 }
 
 void Board::setPieceAt(const Position& pos, std::shared_ptr<Piece> piece) {
-    set_piece(pos, piece ? std::unique_ptr<Piece>(piece->clone()) : nullptr);
+    set_piece(pos, piece ? piece->clone_unique() : nullptr);
 }
 
 void Board::movePiece(const Position& from, const Position& to) {

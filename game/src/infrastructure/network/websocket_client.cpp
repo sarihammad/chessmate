@@ -1,92 +1,91 @@
 #include "infrastructure/network/websocket_client.hpp"
-#include <iostream>
-#include "utils/utils.hpp"
+#include <chrono>
+#include <spdlog/spdlog.h>
+#include <nlohmann/json.hpp>
 
-namespace chess {
+using namespace std::chrono_literals;
 
-WebSocketClient::WebSocketClient() : connected(false) {
-    client.init_asio();
-    client.set_open_handler([this](connection_hdl hdl) { this->onOpen(hdl); });
-    client.set_message_handler([this](connection_hdl hdl, auto msg) { this->onMessage(hdl, msg); });
-    client.set_close_handler([this](connection_hdl hdl) { this->onClose(hdl); });
+namespace cm {
+WebSocketClient::WebSocketClient(std::string url, int reconnect_ms)
+  : url_(std::move(url)), reconnect_ms_(reconnect_ms) {}
+
+WebSocketClient::~WebSocketClient() { stop(); }
+
+void WebSocketClient::on_message(MessageHandler cb) { on_msg_ = std::move(cb); }
+void WebSocketClient::on_state(StateHandler cb) { on_state_ = std::move(cb); }
+
+bool WebSocketClient::send(const std::string& text) {
+  std::scoped_lock lk(q_mtx_);
+  if (outbox_.size() >= max_queue_) return false;
+  outbox_.push(text);
+  return true;
 }
 
-WebSocketClient::~WebSocketClient() {
-    close();
-    if (clientThread.joinable()) clientThread.join();
+void WebSocketClient::start() {
+  if (th_.joinable()) return;
+  th_ = std::thread([this]() { run_(); });
 }
 
-void WebSocketClient::connect(const std::string& uri) {
-    websocketpp::lib::error_code ec;
-    auto con = client.get_connection(uri, ec);
-    if (ec) {
-        std::cerr << "Connection error: " << ec.message() << std::endl;
-        return;
-    }
-    connection = con->get_handle();
-    client.connect(con);
-    clientThread = std::thread([this]() { this->run(); });
+void WebSocketClient::stop() {
+  should_stop_.store(true);
+  if (th_.joinable()) th_.join();
 }
 
-void WebSocketClient::run() {
-    client.run();
-}
-
-void WebSocketClient::sendMessage(const json& message) {
-    if (connected) {
-        std::string payload = message.dump();
-        client.send(connection, payload, websocketpp::frame::opcode::text);
-    }
-}
-
-
-void WebSocketClient::onOpen(connection_hdl hdl) {
-    connected = true;
-    std::cout << "WebSocket connected!" << std::endl;
-}
-
-void WebSocketClient::onMessage(websocketpp::connection_hdl, websocketpp::config::asio_client::message_type::ptr msg) {
+void WebSocketClient::run_() {
+  while (!should_stop_.load()) {
     try {
-        auto payload = json::parse(msg->get_payload());
+      // TODO: connect using your websocketpp/asio client to url_
+      connected_.store(true);
+      if (on_state_) on_state_(true);
+      spdlog::info("WebSocket connected: {}", url_);
 
-        // Always deliver to messageHandler
-        if (messageHandler) {
-            messageHandler(payload);
+      // Pump loop (pseudo): send queued, read messages, ping/pong, etc.
+      while (!should_stop_.load()) {
+        // send queue
+        {
+          std::scoped_lock lk(q_mtx_);
+          while (!outbox_.empty()) {
+            // const auto& msg = outbox_.front();
+            // ws.send(msg);
+            outbox_.pop();
+          }
         }
+        // read one message (blocking with timeout) -> if received:
+        // if (on_msg_) on_msg_(payload);
 
-        // Only call onMoveReceived for opponentMove
-        if (payload["type"] == "opponentMove") {
-            int fromRow = payload["from"]["row"];
-            int fromCol = payload["from"]["col"];
-            int toRow   = payload["to"]["row"];
-            int toCol   = payload["to"]["col"];
-            if (onMoveReceived) {
-                onMoveReceived(Position(fromRow, fromCol), Position(toRow, toCol));
-            }
-        }
-    } catch (...) {
-        std::cerr << "Invalid JSON received.\n";
+        std::this_thread::sleep_for(10ms);
+      }
+      // ws.close()
+      connected_.store(false);
+      if (on_state_) on_state_(false);
+      spdlog::info("WebSocket stopping cleanly.");
+      return;
+    } catch (const std::exception& e) {
+      connected_.store(false);
+      if (on_state_) on_state_(false);
+      spdlog::warn("WebSocket error: {}. Reconnecting in {} ms", e.what(), reconnect_ms_);
+      std::this_thread::sleep_for(std::chrono::milliseconds(reconnect_ms_));
     }
+  }
 }
 
-void WebSocketClient::onClose(connection_hdl) {
-    connected = false;
-    std::cout << "WebSocket closed." << std::endl;
+// Legacy compatibility methods
+void WebSocketClient::connect(const std::string& /*uri*/) {
+  // Update URL and start if not already running
+  if (!th_.joinable()) {
+    start();
+  }
 }
 
-void WebSocketClient::close() {
-    if (connected) {
-        websocketpp::lib::error_code ec;
-        client.close(connection, websocketpp::close::status::normal, "Shutdown", ec);
-    }
-}
-
-void WebSocketClient::setMoveHandler(std::function<void(Position, Position)> handler) {
-    onMoveReceived = std::move(handler);
+void WebSocketClient::sendMessage(const nlohmann::json& message) {
+  send(message.dump());
 }
 
 void WebSocketClient::setMessageHandler(MessageHandler handler) {
-    messageHandler = std::move(handler);
+  on_message(std::move(handler));
 }
 
+void WebSocketClient::close() {
+  stop();
 }
+} // namespace cm

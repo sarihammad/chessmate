@@ -29,12 +29,12 @@ private:
 
     // Player management
     void createLocalPlayers();
-    void createOnlinePlayers(WebSocketClient& wsClient);
+    void createOnlinePlayers(cm::WebSocketClient& wsClient);
     void createAIPlayers();
 
     std::unique_ptr<Game> game_;
     std::unique_ptr<BoardView> boardView_;
-    std::unique_ptr<WebSocketClient> wsClient_;
+    std::unique_ptr<cm::WebSocketClient> wsClient_;
     
 };
 

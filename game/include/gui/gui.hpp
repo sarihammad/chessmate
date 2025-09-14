@@ -5,5 +5,5 @@
 
 namespace chess {
     void runMainMenu(sf::RenderWindow& window, const std::string& serverUri);
-    void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient = nullptr);
+    void runGUI(sf::RenderWindow& window, cm::WebSocketClient* wsClient = nullptr);
 }

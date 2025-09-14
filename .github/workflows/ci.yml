@@ -1,0 +1,32 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request: {}
+
+jobs:
+  build-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - name: Configure
+        run: cmake --preset dev -S . -B build/dev
+      - name: Build
+        run: cmake --build build/dev -j 4
+      - name: Test
+        run: ctest --test-dir build/dev --output-on-failure
+
+  asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - name: Configure (ASAN)
+        run: cmake --preset asan -S . -B build/asan
+      - name: Build (ASAN)
+        run: cmake --build build/asan -j 4
+      - name: Test (ASAN)
+        run: ctest --test-dir build/asan --output-on-failure

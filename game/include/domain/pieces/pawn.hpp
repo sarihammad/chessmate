@@ -14,6 +14,10 @@ public:
     std::shared_ptr<Piece> clone() const override {
         return std::make_shared<Pawn>(*this);
     }
+    
+    std::unique_ptr<Piece> clone_unique() const override {
+        return std::make_unique<Pawn>(*this);
+    }
 
     char symbol() const override {
         return color == Color::White ? 'P' : 'p';

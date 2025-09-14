@@ -7,11 +7,11 @@ namespace chess {
 
 class NetworkPlayer : public Player {
 public:
-    NetworkPlayer(Color color, WebSocketClient& wsClient);
+    NetworkPlayer(Color color, cm::WebSocketClient& wsClient);
     bool makeMove(Board& board, Position& from, Position& to) override;
 
 private:
-    WebSocketClient& client;
+    cm::WebSocketClient& client; // For future network message handling
 };
 
 }

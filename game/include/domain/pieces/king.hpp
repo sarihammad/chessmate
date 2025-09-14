@@ -18,6 +18,10 @@ public:
     std::shared_ptr<Piece> clone() const override {
         return std::make_shared<King>(*this);
     }
+    
+    std::unique_ptr<Piece> clone_unique() const override {
+        return std::make_unique<King>(*this);
+    }
 
     char symbol() const override {
         return color == Color::White ? 'K' : 'k';

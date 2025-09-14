@@ -101,22 +101,22 @@ int evaluateBoard(const Board& board, Color aiColor) {
 
             switch (piece->getType()) {
                 case PieceType::Pawn:
-                    score += modifier * pawnTable[row][col];
+                    score += static_cast<int>(modifier * pawnTable[row][col]);
                     break;
                 case PieceType::Knight:
-                    score += modifier * knightTable[row][col];
+                    score += static_cast<int>(modifier * knightTable[row][col]);
                     break;
                 case PieceType::Bishop:
-                    score += modifier * bishopTable[row][col];
+                    score += static_cast<int>(modifier * bishopTable[row][col]);
                     break;
                 case PieceType::Rook:
-                    score += modifier * rookTable[row][col];
+                    score += static_cast<int>(modifier * rookTable[row][col]);
                     break;
                 case PieceType::Queen:
-                    score += modifier * queenTable[row][col];
+                    score += static_cast<int>(modifier * queenTable[row][col]);
                     break;
                 case PieceType::King: {
-                    score += modifier * kingTable[row][col];
+                    score += static_cast<int>(modifier * kingTable[row][col]);
 
                     // simple king safety
                     int defenders = 0;

@@ -1,5 +1,6 @@
 #include "domain/pieces/pawn.hpp"
 #include "domain/board.hpp"
+#include <cstdlib>
 
 namespace chess {
 
@@ -8,7 +9,7 @@ bool Pawn::isValidMove(const Position& from, const Position& to, const Board& bo
     int startRow = (color == Color::White) ? 1 : 6;
 
     int rowDiff = to.row - from.row;
-    int colDiff = std::abs(to.col - from.col);
+    int colDiff = abs(to.col - from.col);
 
     if (colDiff == 0) {
         if (rowDiff == direction && board.isEmpty(to)) return true;

@@ -22,6 +22,7 @@ public:
     virtual bool isValidMove(const Position& from, const Position& to, const Board& board) const = 0;
 
     virtual std::shared_ptr<Piece> clone() const = 0;
+    virtual std::unique_ptr<Piece> clone_unique() const = 0;
 
     virtual char symbol() const = 0;
     virtual int getValue() const = 0;

@@ -5,6 +5,8 @@
 #include <optional>
 #include <thread>
 #include <chrono>
+#include <cstdlib>
+#include <nlohmann/json.hpp>
 #include "domain/game.hpp"
 #include "gui/widgets/sprite_piece.hpp"
 #include "domain/pieces/rook.hpp"
@@ -42,7 +44,7 @@ std::string getImagePath(const Piece& piece) {
 }
 
 
-void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool humanIsWhite) {
+void runGUI(sf::RenderWindow& window, cm::WebSocketClient* wsClient, bool vsAI, bool humanIsWhite) {
     sf::Font font;
     if (!font.openFromFile("assets/fonts/Arial.ttf")) {
         std::cerr << "Failed to load font for game UI.\n";
@@ -70,7 +72,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
         // Wait for connection with timeout
         int connectionAttempts = 0;
         const int maxAttempts = 50; // 5 seconds at 60fps
-        while (!wsClient->isConnected() && connectionAttempts < maxAttempts) {
+        while (!wsClient->is_connected() && connectionAttempts < maxAttempts) {
             // Process events to keep window responsive
             while (const std::optional<sf::Event> event = window.pollEvent()) {
                 if (event->is<sf::Event::Closed>()) {
@@ -84,7 +86,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
             window.draw(boardSprite);
             
             sf::Font statusFont;
-            statusFont.openFromFile("assets/fonts/Arial.ttf");
+            (void)statusFont.openFromFile("assets/fonts/Arial.ttf");
             sf::Text statusText(statusFont, statusMessage, 40);
             statusText.setFillColor(sf::Color::White);
             statusText.setPosition(sf::Vector2f(100.f, 350.f));
@@ -95,7 +97,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
             connectionAttempts++;
         }
         
-        if (!wsClient->isConnected()) {
+        if (!wsClient->is_connected()) {
             statusMessage = "Failed to connect to server";
             // Show error and return to menu
             while (window.isOpen()) {
@@ -110,7 +112,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
                 window.draw(boardSprite);
                 
                 sf::Font statusFont;
-                statusFont.openFromFile("assets/fonts/Arial.ttf");
+                (void)statusFont.openFromFile("assets/fonts/Arial.ttf");
                 sf::Text statusText(statusFont, statusMessage, 40);
                 statusText.setFillColor(sf::Color::Red);
                 statusText.setPosition(sf::Vector2f(100.f, 350.f));
@@ -163,7 +165,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
             game.setBlackPlayer(std::make_unique<HumanPlayer>(Color::Black));
         }
     } else if (wsClient) {
-        wsClient->setMessageHandler([&](const json& msg) {
+        wsClient->setMessageHandler([&](const nlohmann::json& msg) {
             std::cout << "[WS MESSAGE] Received: " << msg.dump() << std::endl;
             if (msg.value("type", "") == "start") {
                 if (msg.contains("color")) {
@@ -197,7 +199,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
             }
         });
         statusMessage = "Waiting for opponent...";
-        wsClient->sendMessage(json{{"type", "join"}});
+        wsClient->sendMessage(nlohmann::json{{"type", "join"}});
     } else {
         game.setWhitePlayer(std::make_unique<HumanPlayer>(Color::White));
         game.setBlackPlayer(std::make_unique<HumanPlayer>(Color::Black));
@@ -223,8 +225,8 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
     possibleCaptureMoveSprite.setSize(sf::Vector2f(TILE_SIZE, TILE_SIZE));
     possibleCaptureMoveSprite.setFillColor(sf::Color(255, 0, 0, 255));
 
-    bool isWhiteHuman = game.isWhiteHuman();
-    bool isBlackHuman = game.isBlackHuman();
+    // bool isWhiteHuman = game.isWhiteHuman();
+    // bool isBlackHuman = game.isBlackHuman();
 
     bool isPromoting = false;
     Position promotionPos(-1, -1);
@@ -283,7 +285,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
                 if (isMouseDown && hasSelected && !isDragging) {
                     int dx = mouseMoveEvent->position.x - mouseDownPos.x;
                     int dy = mouseMoveEvent->position.y - mouseDownPos.y;
-                    if (std::abs(dx) > 10 || std::abs(dy) > 10) {
+                    if (abs(dx) > 10 || abs(dy) > 10) {
                         // Start dragging
                         isDragging = true;
                         dragConfirmed = true;
@@ -327,7 +329,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
                             if (game.playTurn(dragStartPos, target)) {
                                 if (wsClient && ((game.isWhiteHuman() && game.getCurrentTurn() == Color::Black) ||
                                                 (game.isBlackHuman() && game.getCurrentTurn() == Color::White))) {
-                                    json moveMsg = {
+                                    nlohmann::json moveMsg = {
                                         { "type", "move" },
                                         { "from", { { "row", dragStartPos.row }, { "col", dragStartPos.col } } },
                                         { "to",   { { "row", target.row }, { "col", target.col } } }
@@ -359,7 +361,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
                             }
 
                             if (wsClient && dynamic_cast<NetworkPlayer*>(game.getCurrentPlayer())) {
-                            json moveMsg = {
+                            nlohmann::json moveMsg = {
                                 { "type", "move" },
                                 { "from", { { "row", dragStartPos.row }, { "col", dragStartPos.col } } },
                                 { "to",   { { "row", target.row }, { "col", target.col } } }
@@ -386,7 +388,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
                         // Check if this was actually a click (mouse didn't move much)
                         int dx = event->getIf<sf::Event::MouseButtonReleased>()->position.x - mouseDownPos.x;
                         int dy = event->getIf<sf::Event::MouseButtonReleased>()->position.y - mouseDownPos.y;
-                        bool wasClick = (std::abs(dx) <= 5 && std::abs(dy) <= 5);
+                        bool wasClick = (abs(dx) <= 5 && abs(dy) <= 5);
                         
                         std::cout << "DEBUG: Mouse released at " << clicked.row << "," << clicked.col 
                                   << " dx=" << dx << " dy=" << dy << " wasClick=" << wasClick 
@@ -444,7 +446,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
                                     if (game.playTurn(selected, clicked)) {
                                         std::cout << "DEBUG: Move executed successfully!" << std::endl;
                                         if (wsClient) {
-                                            json moveMsg = {
+                                            nlohmann::json moveMsg = {
                                                 { "type", "move" },
                                                 { "from", { { "row", fromPos.row }, { "col", fromPos.col } } },
                                                 { "to",   { { "row", clicked.row }, { "col", clicked.col } } }
@@ -654,7 +656,7 @@ void runGUI(sf::RenderWindow& window, WebSocketClient* wsClient, bool vsAI, bool
         if (waitingForMatch) {
             // Only show waiting message, do not process moves or allow interaction
             sf::Font statusFont;
-            statusFont.openFromFile("assets/fonts/Arial.ttf");
+            (void)statusFont.openFromFile("assets/fonts/Arial.ttf");
             sf::Text statusText(statusFont, statusMessage, 40);
             statusText.setFillColor(sf::Color::White);
             statusText.setPosition(sf::Vector2f(300.f, 350.f));
@@ -735,7 +737,7 @@ void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
     float btnWidth = 350, btnHeight = 70, spacing = 30;
     float startY = 250;
     for (int i = 0; i < 4; ++i) {
-        Button btn{sf::RectangleShape(), sf::Text(font, labels[i], 36), nullptr, false};
+        Button btn{sf::RectangleShape(), sf::Text(font, labels[static_cast<size_t>(i)], 36), nullptr, false};
         btn.rect.setSize(sf::Vector2f(btnWidth, btnHeight));
         btn.rect.setOrigin({btnWidth / 2, btnHeight / 2});
         btn.rect.setPosition({400, startY + i * (btnHeight + spacing)});
@@ -750,7 +752,7 @@ void runMainMenu(sf::RenderWindow& window, const std::string& serverUri) {
 
     // Button actions
     buttons[0].onClick = [&]() { window.clear(); window.display(); runGUI(window, nullptr, false, true); };
-    buttons[1].onClick = [&]() { window.clear(); window.display(); chess::WebSocketClient* wsClient = new chess::WebSocketClient(); wsClient->connect(serverUri); runGUI(window, wsClient, false, true); delete wsClient; };
+    buttons[1].onClick = [&]() { window.clear(); window.display(); cm::WebSocketClient* wsClient = new cm::WebSocketClient(serverUri, 2000); wsClient->connect(serverUri); runGUI(window, wsClient, false, true); delete wsClient; };
     buttons[2].onClick = [&]() {
         // Color selection overlay
         sf::RectangleShape overlay(sf::Vector2f(800.f, 800.f));

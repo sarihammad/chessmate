@@ -1,36 +1,30 @@
-# Build directories
+# Build artifacts
 build/
-target/
+cmake-build-*/
 game/build/
 server/target/
-bin/
-lib/
-out/
 
-# IDE files
+# Local IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
-# OS files
+# OS junk
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# CMake files
-CMakeCache.txt
+# Python caches (for any tools/scripts)
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# CMake deps/cache
+_deps/
 CMakeFiles/
-cmake_install.cmake
-Makefile
-*.cmake
-!CMakeLists.txt
-CMakePresets.json
+CMakeCache.txt
+Testing/
+compile_commands.json
 
 # Compiled files
 *.o

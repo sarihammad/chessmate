@@ -1,0 +1,4 @@
+Checks: 'bugprone-*,performance-*,readability-*,modernize-*,cppcoreguidelines-*'
+WarningsAsErrors: '*'
+HeaderFilterRegex: '^(game/include|game/src)/'
+FormatStyle: file
