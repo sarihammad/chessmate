@@ -40,7 +40,7 @@ struct Move {
     Position from;
     Position to;
 
-    Move(Position from, Position to) : from(from), to(to) {}
+    Move(Position from_pos, Position to_pos) : from(from_pos), to(to_pos) {}
     Move() = default;
 };
 
