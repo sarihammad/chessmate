@@ -2,8 +2,13 @@
 
 #include <SFML/Graphics.hpp>
 #include "infrastructure/network/websocket_client.hpp"
+#include "infrastructure/config.hpp"
 
 namespace chess {
-    void runMainMenu(sf::RenderWindow& window, const std::string& serverUri);
-    void runGUI(sf::RenderWindow& window, cm::WebSocketClient* wsClient = nullptr);
+
+enum class AppState { Menu, Game, Quit };
+
+AppState runMainMenu(sf::RenderWindow& window, const Config& cfg);
+AppState runGame(sf::RenderWindow& window, const Config& cfg);
+
 }
