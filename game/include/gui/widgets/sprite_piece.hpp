@@ -11,7 +11,7 @@ class Piece;
 
 class SpritePiece {
 public:
-    SpritePiece(std::shared_ptr<Piece> piece, const std::string& imagePath, float x, float y);
+    SpritePiece(std::shared_ptr<Piece> piecePtr, const std::string& imagePath, float x, float y);
     
     void setPosition(float x, float y);
     void draw(sf::RenderWindow& window) const;

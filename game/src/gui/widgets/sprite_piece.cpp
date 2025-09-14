@@ -6,8 +6,8 @@
 
 namespace chess {
 
-SpritePiece::SpritePiece(std::shared_ptr<Piece> piece, const std::string& imagePath, float x, float y)
-    : piece(piece) {
+SpritePiece::SpritePiece(std::shared_ptr<Piece> piecePtr, const std::string& imagePath, float x, float y)
+    : piece(piecePtr) {
     // Load texture and create sprite
     try {
         sf::Texture& texture = TextureManager::getTexture(imagePath);
