@@ -12,6 +12,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 ## 🎮 Features
 
 ### Core Gameplay
+
 - **🧠 Advanced AI**: Minimax with alpha-beta pruning, configurable depth
 - **👥 Multiplayer**: Real-time online play via WebSocket
 - **🏠 Local Play**: Two players on the same machine
@@ -19,6 +20,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 - **📊 Move Validation**: Perft-verified move generation and legality
 
 ### User Experience
+
 - **🎨 Modern UI**: Clean, responsive SFML-based interface
 - **🔊 Sound Effects**: Immersive audio feedback for all actions
 - **⚙️ Configurable**: JSON-based configuration system
@@ -26,6 +28,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 - **🎯 High Performance**: 60 FPS with efficient rendering
 
 ### Quality & Testing
+
 - **🧪 Comprehensive Tests**: Perft tests, unit tests, integration tests
 - **🔍 Static Analysis**: clang-tidy, sanitizers, warnings-as-errors
 - **📈 CI/CD**: Automated testing and quality gates
@@ -34,6 +37,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 ## 🏗️ Architecture
 
 ### System Overview
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Chessmate Ecosystem                  │
@@ -52,6 +56,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 ```
 
 ### Client Architecture (Clean Architecture)
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Presentation Layer                   │
@@ -99,6 +104,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 ## 🛠️ Tech Stack
 
 ### Client (C++23)
+
 - **🎨 Graphics**: SFML 3.0 for rendering, window management, and audio
 - **🌐 Networking**: WebSocket++ for real-time multiplayer communication
 - **📦 JSON**: nlohmann/json for data serialization and configuration
@@ -108,6 +114,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 - **🔍 Quality**: clang-tidy, AddressSanitizer, UndefinedBehaviorSanitizer
 
 ### Server (Java 17+)
+
 - **☕ Framework**: Spring Boot 3.0+ for rapid development and deployment
 - **🌐 WebSocket**: Spring WebSocket for real-time bidirectional communication
 - **🔨 Build**: Maven for dependency management and packaging
@@ -119,11 +126,13 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 ### Prerequisites
 
 #### System Requirements
+
 - **OS**: Windows 10+, macOS 10.15+, or Ubuntu 18.04+
 - **RAM**: 4GB minimum, 8GB recommended
 - **Storage**: 500MB for installation
 
 #### Development Tools
+
 - **C++23 Compiler**: GCC 11+, Clang 14+, or MSVC 2022+
 - **CMake**: 3.20 or higher
 - **Java**: OpenJDK 17 or higher
@@ -132,6 +141,7 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 ### Installation
 
 #### macOS (Homebrew)
+
 ```bash
 # Install dependencies
 brew install sfml cmake openjdk@17 maven
@@ -142,6 +152,7 @@ cd chessmate
 ```
 
 #### Ubuntu/Debian
+
 ```bash
 # Install dependencies
 sudo apt update
@@ -153,6 +164,7 @@ cd chessmate
 ```
 
 #### Windows
+
 ```bash
 # Install via vcpkg
 vcpkg install sfml:x64-windows
@@ -166,6 +178,7 @@ cd chessmate
 ### Building
 
 #### Client
+
 ```bash
 cd game
 cmake --preset dev          # Configure with debug settings
@@ -173,6 +186,7 @@ cmake --build --preset dev  # Build with sanitizers and tests
 ```
 
 #### Server
+
 ```bash
 cd server
 ./mvnw clean package        # Build with Maven wrapper
@@ -181,12 +195,14 @@ cd server
 ### Running
 
 #### Start Server
+
 ```bash
 cd server
 java -jar target/chessmate-server-1.0.0.jar
 ```
 
 #### Start Client
+
 ```bash
 cd game
 ./build/dev/chessmate       # Run with debug configuration
@@ -195,6 +211,7 @@ cd game
 ## 🧪 Testing
 
 ### Running Tests
+
 ```bash
 cd game
 cmake --preset dev
@@ -203,12 +220,14 @@ cmake --build --preset dev
 ```
 
 ### Test Coverage
+
 - **Unit Tests**: Individual component testing
 - **Perft Tests**: Move generation validation against known positions
 - **Integration Tests**: Full game flow testing
 - **Property Tests**: Random move generation and validation
 
 ### Quality Gates
+
 ```bash
 # Static Analysis
 clang-tidy src/**/*.cpp include/**/*.hpp
@@ -224,6 +243,7 @@ valgrind --leak-check=full ./chessmate
 ## ⚙️ Configuration
 
 ### Client Configuration (`config.json`)
+
 ```json
 {
   "websocket": {
@@ -252,6 +272,7 @@ valgrind --leak-check=full ./chessmate
 ```
 
 ### Server Configuration (`application.properties`)
+
 ```properties
 server.port=8080
 spring.websocket.max-text-message-size=8192
@@ -304,6 +325,7 @@ chessmate/
 ## 🔧 Development
 
 ### Code Style
+
 - **Modern C++23**: Use latest language features (`constexpr`, `noexcept`, `<=>`)
 - **RAII**: Resource management through constructors/destructors
 - **Const Correctness**: Mark everything `const` when possible
@@ -311,6 +333,7 @@ chessmate/
 - **Clean Architecture**: Clear separation of concerns
 
 ### Build Presets
+
 ```bash
 cmake --preset dev      # Debug build with sanitizers
 cmake --preset release  # Optimized release build
@@ -319,6 +342,7 @@ cmake --preset ubsan    # Undefined Behavior Sanitizer build
 ```
 
 ### Contributing
+
 1. **Fork** the repository
 2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
 3. **Implement** your changes with tests
@@ -328,6 +352,7 @@ cmake --preset ubsan    # Undefined Behavior Sanitizer build
 7. **Open** a Pull Request
 
 ### Conventional Commits
+
 ```
 feat: add new feature
 fix: bug fix
@@ -342,12 +367,14 @@ build: build system changes
 ## 📊 Performance
 
 ### Benchmarks
+
 - **Move Generation**: 20M nodes/second on modern hardware
 - **AI Search**: 3-4 depth in <100ms for typical positions
 - **Rendering**: Consistent 60 FPS with V-Sync
 - **Memory**: <50MB RAM usage during gameplay
 
 ### Optimization Features
+
 - **Bitboards**: Fast piece lookup and move generation
 - **Transposition Tables**: Cache search results for repeated positions
 - **Move Ordering**: PV move first, then captures (MVV-LVA)
@@ -356,18 +383,20 @@ build: build system changes
 ## 🌐 Networking Protocol
 
 ### WebSocket Message Format
+
 ```json
 {
-  "v": 1,                    // Protocol version
-  "type": "move",            // Message type
-  "from": {"row": 6, "col": 4},
-  "to": {"row": 4, "col": 4},
+  "v": 1, // Protocol version
+  "type": "move", // Message type
+  "from": { "row": 6, "col": 4 },
+  "to": { "row": 4, "col": 4 },
   "uuid": "unique-move-id",
   "timestamp": 1234567890
 }
 ```
 
 ### Message Types
+
 - `join`: Join matchmaking queue
 - `start`: Game started notification
 - `move`: Chess move
@@ -380,6 +409,7 @@ build: build system changes
 ### Common Issues
 
 #### Build Failures
+
 ```bash
 # Check CMake version
 cmake --version  # Should be 3.20+
@@ -393,6 +423,7 @@ cmake --preset dev
 ```
 
 #### Runtime Issues
+
 ```bash
 # Check configuration
 cat config.json
@@ -405,6 +436,7 @@ curl http://localhost:8080/health
 ```
 
 #### Performance Issues
+
 - Reduce AI depth in configuration
 - Disable animations for better performance
 - Check system requirements
@@ -424,6 +456,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📈 Roadmap
 
 ### Version 2.0
+
 - [ ] **Transposition Tables** for improved AI performance
 - [ ] **Quiescence Search** to avoid horizon effect
 - [ ] **Opening Book** for stronger opening play
@@ -432,6 +465,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] **Chess960** variant support
 
 ### Version 2.1
+
 - [ ] **Mobile Support** (Android/iOS)
 - [ ] **Tournament Mode** with multiple games
 - [ ] **Analysis Mode** with move suggestions
@@ -439,6 +473,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] **Cloud Saves** for game history
 
 ### Version 3.0
+
 - [ ] **Machine Learning** AI using neural networks
 - [ ] **3D Graphics** with modern rendering
 - [ ] **VR Support** for immersive gameplay
