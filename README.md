@@ -1,11 +1,4 @@
-# ♟️ Chessmate
-
-[![C++](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
-[![SFML](https://img.shields.io/badge/SFML-3.0-green.svg)](https://www.sfml-dev.org/)
-[![CMake](https://img.shields.io/badge/CMake-3.20+-blue.svg)](https://cmake.org/)
-[![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://openjdk.java.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.0+-green.svg)](https://spring.io/projects/spring-boot)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+# Chessmate
 
 A full-featured C++ chess application with clean architecture, supporting local multiplayer, online multiplayer using WebSocket, and AI play using minimax algorithm with alpha-beta pruning. Built with SFML for the GUI and designed for maintainability, extensibility, and testability.
 
@@ -20,33 +13,6 @@ A full-featured C++ chess application with clean architecture, supporting local 
 <img width="1121" height="579" alt="Screenshot 2025-08-03 at 7 42 47 pm" src="https://github.com/user-attachments/assets/195bd620-d7d6-4495-bf55-45bb6ffc00f9" />
 
 ---
-
-## Features
-
-### Core Gameplay
-
-- **Advanced AI**: Minimax with alpha-beta pruning, configurable depth
-- **Multiplayer**: Real-time online play via WebSocket
-- **Local Play**: Two players on the same machine
-- **Complete Chess**: All pieces, moves, and rules implemented
-- **Move Validation**: Perft-verified move generation and legality
-
-### User Experience
-
-- **Modern UI**: Clean, responsive SFML-based interface with gradient menus and polished buttons
-- **Sound Effects**: Immersive audio feedback for moves, captures, and game events
-- **Configurable**: JSON-based configuration system for all settings
-- **Cross-Platform**: Windows, macOS, and Linux support
-- **High Performance**: 60 FPS with efficient rendering and hardware acceleration
-- **Intuitive Controls**: Click-and-drag interface with visual move indicators
-- **Game Over Menu**: Restart, Main Menu, and Quit options after each game
-
-### Quality & Testing
-
-- **Comprehensive Tests**: Perft tests, unit tests, integration tests
-- **Static Analysis**: clang-tidy, sanitizers, warnings-as-errors
-- **CI/CD**: Automated testing and quality gates
-- **Documentation**: Complete API docs and architecture guides
 
 ## Architecture
 
@@ -104,6 +70,33 @@ graph TD
     B3 -->|"Player Type"| D3
     B3 -->|"Player Type"| D6
 ```
+
+## Features
+
+### Core Gameplay
+
+- **Advanced AI**: Minimax with alpha-beta pruning, configurable depth
+- **Multiplayer**: Real-time online play via WebSocket
+- **Local Play**: Two players on the same machine
+- **Complete Chess**: All pieces, moves, and rules implemented
+- **Move Validation**: Perft-verified move generation and legality
+
+### User Experience
+
+- **Modern UI**: Clean, responsive SFML-based interface with gradient menus and polished buttons
+- **Sound Effects**: Immersive audio feedback for moves, captures, and game events
+- **Configurable**: JSON-based configuration system for all settings
+- **Cross-Platform**: Windows, macOS, and Linux support
+- **High Performance**: 60 FPS with efficient rendering and hardware acceleration
+- **Intuitive Controls**: Click-and-drag interface with visual move indicators
+- **Game Over Menu**: Restart, Main Menu, and Quit options after each game
+
+### Quality & Testing
+
+- **Comprehensive Tests**: Perft tests, unit tests, integration tests
+- **Static Analysis**: clang-tidy, sanitizers, warnings-as-errors
+- **CI/CD**: Automated testing and quality gates
+- **Documentation**: Complete API docs and architecture guides
 
 ### Clean Architecture Implementation
 
@@ -300,7 +293,3 @@ cmake --build --preset dev
 - **Network**: WebSocket for low-latency multiplayer with minimal overhead
 - **Memory**: Efficient `std::unique_ptr` usage eliminates reference counting overhead
 - **Cache-Friendly**: `std::array` data structures for predictable memory layout
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
