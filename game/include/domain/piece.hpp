@@ -24,6 +24,7 @@ public:
     virtual std::shared_ptr<Piece> clone() const = 0;
 
     virtual char symbol() const = 0;
+    virtual int getValue() const = 0;
 };
 
 }

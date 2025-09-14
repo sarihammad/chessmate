@@ -18,6 +18,8 @@ public:
     char symbol() const override {
         return color == Color::White ? 'N' : 'n';
     }
+
+    int getValue() const override { return 30; }
 };
 
 }

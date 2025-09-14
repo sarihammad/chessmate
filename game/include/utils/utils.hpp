@@ -7,16 +7,30 @@ struct Position {
     int row = 0;
     int col = 0;
 
-    Position() = default;
-    Position(int r, int c) : row(r), col(c) {}
+    constexpr Position() = default;
+    constexpr Position(int r, int c) noexcept : row(r), col(c) {}
 
-    bool isValid() const;
+    [[nodiscard]] constexpr bool is_valid() const noexcept {
+        return row >= 0 && row < 8 && col >= 0 && col < 8;
+    }
+    
+    [[nodiscard]] constexpr bool on_board() const noexcept {
+        return is_valid();
+    }
 
-    bool operator==(const Position& other) const;
+    // Legacy interface for compatibility
+    [[nodiscard]] bool isValid() const { return is_valid(); }
 
-    bool operator!=(const Position& other) const;
-
-    bool operator<(const Position& other) const;
+    [[nodiscard]] constexpr bool operator==(const Position& other) const noexcept = default;
+    [[nodiscard]] constexpr bool operator!=(const Position& other) const noexcept = default;
+    [[nodiscard]] constexpr bool operator<(const Position& other) const noexcept {
+        return row < other.row || (row == other.row && col < other.col);
+    }
+    
+    [[nodiscard]] constexpr std::strong_ordering operator<=>(const Position& other) const noexcept {
+        if (auto cmp = row <=> other.row; cmp != 0) return cmp;
+        return col <=> other.col;
+    }
 };
 
 Color getOtherColor(Color c);

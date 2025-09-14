@@ -24,6 +24,8 @@ public:
         return color == Color::White ? 'R' : 'r';
     }
 
+    int getValue() const override { return 50; }
+
     void markMoved() override;
     bool hasMovedAlready() const override;
 };

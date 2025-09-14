@@ -1,0 +1,180 @@
+---
+Checks: >
+  bugprone-*,
+  performance-*,
+  readability-*,
+  modernize-*,
+  cppcoreguidelines-*,
+  misc-non-private-member-variables-in-classes,
+  misc-const-correctness,
+  misc-unused-parameters,
+  misc-unused-using-decls,
+  misc-unused-alias-decls,
+  misc-no-recursion,
+  misc-throw-by-value-catch-by-reference,
+  misc-use-override,
+  misc-virtual-near-miss,
+  misc-misleading-bidirectional,
+  misc-misleading-identifier,
+  misc-suspicious-enum-usage,
+  misc-suspicious-missing-comma,
+  misc-suspicious-semicolon,
+  misc-suspicious-string-compare,
+  misc-suspicious-string-usage,
+  misc-undelegated-constructor,
+  misc-uniqueptr-reset-release,
+  misc-unused-alias-decls,
+  misc-unused-parameters,
+  misc-unused-using-decls,
+  misc-use-override,
+  misc-virtual-near-miss
+
+WarningsAsErrors: '*'
+
+HeaderFilterRegex: '^(include|src)/'
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberCase
+    value: camelBack_
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: camelBack_
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: camelBack_
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.StaticConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.StaticVariableCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.NamespaceCase
+    value: lowercase
+  - key: readability-identifier-naming.ClassConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.ClassMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.PublicMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeTemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.ValueTemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.VariableTemplateCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionTemplateCase
+    value: camelBack
+  - key: readability-identifier-naming.ClassTemplateCase
+    value: CamelCase
+  - key: readability-identifier-naming.UnionCase
+    value: CamelCase
+  - key: readability-identifier-naming.UnionMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.ConceptCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.StaticVariablePrefix
+    value: ''
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: ''
+  - key: readability-identifier-naming.ClassConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.MacroDefinitionPrefix
+    value: ''
+  - key: readability-identifier-naming.NamespacePrefix
+    value: ''
+  - key: readability-identifier-naming.TypeAliasPrefix
+    value: ''
+  - key: readability-identifier-naming.UnionPrefix
+    value: ''
+  - key: readability-identifier-naming.ConceptPrefix
+    value: ''
+  - key: readability-identifier-naming.TemplateParameterPrefix
+    value: ''
+  - key: readability-identifier-naming.TypeTemplateParameterPrefix
+    value: ''
+  - key: readability-identifier-naming.ValueTemplateParameterPrefix
+    value: ''
+  - key: readability-identifier-naming.VariableTemplatePrefix
+    value: ''
+  - key: readability-identifier-naming.FunctionTemplatePrefix
+    value: ''
+  - key: readability-identifier-naming.ClassTemplatePrefix
+    value: ''
+  - key: readability-identifier-naming.UnionMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumMemberCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumMemberCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumMemberCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumPrefix
+    value: ''
+  - key: readability-identifier-naming.EnumMemberCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumMemberPrefix
+    value: ''

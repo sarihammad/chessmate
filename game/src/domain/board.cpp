@@ -9,93 +9,158 @@
 
 namespace chess {
 
-Board::Board() : squares(8, std::vector<std::shared_ptr<Piece>>(8, nullptr)) {}
-
-std::shared_ptr<Piece> Board::getPieceAt(const Position& pos) const {
-    if (!pos.isValid()) return nullptr;
-    return squares[pos.row][pos.col];
-}
-
-Board Board::clone() const {
-    Board copy;
+Board::Board(const Board& other) {
     for (int r = 0; r < 8; ++r) {
         for (int c = 0; c < 8; ++c) {
             Position pos(r, c);
-            auto piece = getPieceAt(pos);
+            const auto* piece = other.piece_at(pos);
             if (piece) {
-                copy.setPieceAt(pos, piece->clone());
+                squares_[r][c] = piece->clone();
             }
         }
     }
-    return copy;
 }
 
-void Board::setPieceAt(const Position& pos, std::shared_ptr<Piece> piece) {
-    if (pos.isValid())
-        squares[pos.row][pos.col] = piece;
+Board& Board::operator=(const Board& other) {
+    if (this != &other) {
+        for (int r = 0; r < 8; ++r) {
+            for (int c = 0; c < 8; ++c) {
+                Position pos(r, c);
+                const auto* piece = other.piece_at(pos);
+                if (piece) {
+                    squares_[r][c] = piece->clone();
+                } else {
+                    squares_[r][c].reset();
+                }
+            }
+        }
+    }
+    return *this;
 }
 
-void Board::movePiece(const Position& from, const Position& to) {
-    if (!from.isValid() || !to.isValid()) return;
+const Piece* Board::piece_at(Position pos) const noexcept {
+    if (!pos.is_valid()) return nullptr;
+    return squares_[pos.row][pos.col].get();
+}
 
-    auto piece = getPieceAt(from);
+Piece* Board::piece_at(Position pos) noexcept {
+    if (!pos.is_valid()) return nullptr;
+    return squares_[pos.row][pos.col].get();
+}
 
-    // en passant
-    if (piece && piece->getType() == PieceType::Pawn && isEmpty(to) &&
+void Board::set_piece(Position pos, std::unique_ptr<Piece> piece) noexcept {
+    if (pos.is_valid()) {
+        squares_[pos.row][pos.col] = std::move(piece);
+    }
+}
+
+void Board::move_piece(Position from, Position to) noexcept {
+    if (!from.is_valid() || !to.is_valid()) return;
+
+    auto piece = std::move(squares_[from.row][from.col]);
+    if (!piece) return;
+
+    // Handle en passant
+    if (piece->getType() == PieceType::Pawn && is_empty(to) &&
         std::abs(to.col - from.col) == 1 && std::abs(to.row - from.row) == 1) {
-        // diagonal move to empty square -> en passant
         int capturedPawnRow = (piece->getColor() == Color::White) ? to.row - 1 : to.row + 1;
         Position capturedPos(capturedPawnRow, to.col);
-        setPieceAt(capturedPos, nullptr);
+        clear(capturedPos);
     }
 
-    setPieceAt(to, piece);
-    setPieceAt(from, nullptr);
+    squares_[to.row][to.col] = std::move(piece);
+    squares_[from.row][from.col].reset();
 }
 
-bool Board::isEmpty(const Position& pos) const {
-    return getPieceAt(pos) == nullptr;
+void Board::clear(Position pos) noexcept {
+    if (pos.is_valid()) {
+        squares_[pos.row][pos.col].reset();
+    }
 }
 
-void Board::setupInitialPosition() {
+bool Board::is_empty(Position pos) const noexcept {
+    return piece_at(pos) == nullptr;
+}
+
+bool Board::is_check(Color color) const noexcept {
+    Position kingPos(-1, -1);
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position pos(r, c);
+            const auto* piece = piece_at(pos);
+            if (piece && piece->getType() == PieceType::King && piece->getColor() == color) {
+                kingPos = pos;
+                break;
+            }
+        }
+        if (kingPos.row != -1) break;
+    }
+
+    if (kingPos.row == -1) return false; // King not found
+
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            Position attackerPos(r, c);
+            const auto* attacker = piece_at(attackerPos);
+            if (attacker && attacker->getColor() != color) {
+                if (attacker->isValidMove(attackerPos, kingPos, *this)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+void Board::setup_initial_position() {
     std::cout << "Setting up initial board position..." << std::endl;
     
+    // Clear the board
+    for (int r = 0; r < 8; ++r) {
+        for (int c = 0; c < 8; ++c) {
+            squares_[r][c].reset();
+        }
+    }
+    
+    // Place pawns
     for (int col = 0; col < 8; ++col) {
-        setPieceAt(Position(1, col), std::make_shared<Pawn>(Color::White));
-        setPieceAt(Position(6, col), std::make_shared<Pawn>(Color::Black));
+        set_piece(Position(1, col), std::make_unique<Pawn>(Color::White));
+        set_piece(Position(6, col), std::make_unique<Pawn>(Color::Black));
     }
 
-    std::vector<std::shared_ptr<Piece>> whiteBack = {
-        std::make_shared<Rook>(Color::White),
-        std::make_shared<Knight>(Color::White),
-        std::make_shared<Bishop>(Color::White),
-        std::make_shared<Queen>(Color::White),
-        std::make_shared<King>(Color::White),
-        std::make_shared<Bishop>(Color::White),
-        std::make_shared<Knight>(Color::White),
-        std::make_shared<Rook>(Color::White)
+    // Place back rank pieces
+    std::array<std::unique_ptr<Piece>, 8> whiteBack = {
+        std::make_unique<Rook>(Color::White),
+        std::make_unique<Knight>(Color::White),
+        std::make_unique<Bishop>(Color::White),
+        std::make_unique<Queen>(Color::White),
+        std::make_unique<King>(Color::White),
+        std::make_unique<Bishop>(Color::White),
+        std::make_unique<Knight>(Color::White),
+        std::make_unique<Rook>(Color::White)
     };
 
-    std::vector<std::shared_ptr<Piece>> blackBack = {
-        std::make_shared<Rook>(Color::Black),
-        std::make_shared<Knight>(Color::Black),
-        std::make_shared<Bishop>(Color::Black),
-        std::make_shared<Queen>(Color::Black),
-        std::make_shared<King>(Color::Black),
-        std::make_shared<Bishop>(Color::Black),
-        std::make_shared<Knight>(Color::Black),
-        std::make_shared<Rook>(Color::Black)
+    std::array<std::unique_ptr<Piece>, 8> blackBack = {
+        std::make_unique<Rook>(Color::Black),
+        std::make_unique<Knight>(Color::Black),
+        std::make_unique<Bishop>(Color::Black),
+        std::make_unique<Queen>(Color::Black),
+        std::make_unique<King>(Color::Black),
+        std::make_unique<Bishop>(Color::Black),
+        std::make_unique<Knight>(Color::Black),
+        std::make_unique<Rook>(Color::Black)
     };
 
     for (int col = 0; col < 8; ++col) {
-        setPieceAt(Position(0, col), whiteBack[col]);
-        setPieceAt(Position(7, col), blackBack[col]);
+        set_piece(Position(0, col), std::move(whiteBack[col]));
+        set_piece(Position(7, col), std::move(blackBack[col]));
     }
     
     std::cout << "Board setup complete. Pieces placed:" << std::endl;
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
-            auto piece = getPieceAt({row, col});
+            const auto* piece = piece_at({row, col});
             if (piece) {
                 std::cout << "  (" << row << "," << col << "): " << piece->symbol() << std::endl;
             }
@@ -103,29 +168,31 @@ void Board::setupInitialPosition() {
     }
 }
 
-bool Board::isCheck(Color color) const {
-    Position kingPos(-1, -1);
-    for (int r = 0; r < 8; ++r) {
-        for (int c = 0; c < 8; ++c) {
-            Position pos(r, c);
-            auto piece = getPieceAt(pos);
-            if (piece && piece->getType() == PieceType::King && piece->getColor() == color)
-                kingPos = pos;
-        }
-    }
-
-    for (int r = 0; r < 8; ++r) {
-        for (int c = 0; c < 8; ++c) {
-            Position attackerPos(r, c);
-            auto attacker = getPieceAt(attackerPos);
-            if (attacker && attacker->getColor() != color) {
-                if (attacker->isValidMove(attackerPos, kingPos, *this))
-                    return true;
-            }
-        }
-    }
-
-    return false;
+Board Board::clone() const {
+    return Board(*this);
 }
+
+// Legacy interface implementations for compatibility
+std::shared_ptr<Piece> Board::getPieceAt(const Position& pos) const {
+    const auto* piece = piece_at(pos);
+    return piece ? std::shared_ptr<Piece>(piece->clone()) : nullptr;
+}
+
+void Board::setPieceAt(const Position& pos, std::shared_ptr<Piece> piece) {
+    set_piece(pos, piece ? std::unique_ptr<Piece>(piece->clone()) : nullptr);
+}
+
+void Board::movePiece(const Position& from, const Position& to) {
+    move_piece(from, to);
+}
+
+void Board::setupInitialPosition() {
+    setup_initial_position();
+}
+
+bool Board::isEmpty(const Position& pos) const {
+    return is_empty(pos);
+}
+
 
 }

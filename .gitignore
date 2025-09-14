@@ -3,6 +3,9 @@ build/
 target/
 game/build/
 server/target/
+bin/
+lib/
+out/
 
 # IDE files
 .vscode/
@@ -13,6 +16,11 @@ server/target/
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # CMake files
@@ -20,6 +28,9 @@ CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
+*.cmake
+!CMakeLists.txt
+CMakePresets.json
 
 # Compiled files
 *.o
@@ -27,21 +38,42 @@ Makefile
 *.exe
 *.out
 *.app
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
 chessmate
 
 # Java
 *.class
 *.jar
 *.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
 
 # Python
 __pycache__/
+*.py[cod]
+*$py.class
 *.pyc
 *.pyo
+*.so
+.Python
+env/
+venv/
+ENV/
 
 # Logs
 *.log
+logs/
 
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.backup
+
+# Game specific
+config.json
+*.db

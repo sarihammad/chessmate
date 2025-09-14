@@ -23,6 +23,8 @@ public:
         return color == Color::White ? 'K' : 'k';
     }
 
+    int getValue() const override { return 900; }
+
     void markMoved() override;
 
     bool hasMovedAlready() const override;

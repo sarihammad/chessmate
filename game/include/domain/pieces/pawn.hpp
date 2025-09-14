@@ -19,6 +19,8 @@ public:
         return color == Color::White ? 'P' : 'p';
     }
 
+    int getValue() const override { return 10; }
+
     void setEnPassantCapturable(bool value) { 
         enPassantCapturable = value; 
     }
