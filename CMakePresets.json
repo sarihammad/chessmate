@@ -24,7 +24,7 @@
     {
       "name": "release-lto",
       "generator": "Ninja",
-      "binaryDir": "game/build/release-lto",
+      "binaryDir": "build/release-lto",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CHESSMATE_BUILD_TESTS": "OFF",
