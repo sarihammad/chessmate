@@ -1,6 +1,6 @@
 #include "infrastructure/network/websocket_client.hpp"
 #include <chrono>
-#include <spdlog/spdlog.h>
+#include <iostream>
 #include <nlohmann/json.hpp>
 
 using namespace std::chrono_literals;
@@ -37,7 +37,7 @@ void WebSocketClient::run_() {
       // TODO: connect using your websocketpp/asio client to url_
       connected_.store(true);
       if (on_state_) on_state_(true);
-      spdlog::info("WebSocket connected: {}", url_);
+      std::cout << "WebSocket connected: " << url_ << std::endl;
 
       // Pump loop (pseudo): send queued, read messages, ping/pong, etc.
       while (!should_stop_.load()) {
@@ -58,12 +58,12 @@ void WebSocketClient::run_() {
       // ws.close()
       connected_.store(false);
       if (on_state_) on_state_(false);
-      spdlog::info("WebSocket stopping cleanly.");
+      std::cout << "WebSocket stopping cleanly." << std::endl;
       return;
     } catch (const std::exception& e) {
       connected_.store(false);
       if (on_state_) on_state_(false);
-      spdlog::warn("WebSocket error: {}. Reconnecting in {} ms", e.what(), reconnect_ms_);
+      std::cout << "WebSocket error: " << e.what() << ". Reconnecting in " << reconnect_ms_ << " ms" << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(reconnect_ms_));
     }
   }
