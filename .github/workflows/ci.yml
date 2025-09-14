@@ -16,7 +16,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev libudev-dev
+          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev libudev-dev libfreetype6-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev
       - name: Configure
         run: cd game && cmake --preset dev "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
       - name: Build
@@ -32,7 +32,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev libudev-dev
+          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev libudev-dev libfreetype6-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev
       - name: Configure (ASAN)
         run: cd game && cmake --preset asan "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
       - name: Build (ASAN)
