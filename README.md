@@ -7,121 +7,162 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.0+-green.svg)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A modern, production-ready chess engine and game built with C++23 and SFML, featuring advanced AI, real-time multiplayer, and comprehensive testing.
+A full-featured C++ chess application with clean architecture, supporting local multiplayer, online multiplayer using WebSocket, and AI play using minimax algorithm with alpha-beta pruning. Built with SFML for the GUI and designed for maintainability, extensibility, and testability.
 
-## 🎮 Features
+## Demo
+
+### Local Demo
+
+![188940128-b0916b22-a747-4e29-83c7-4596eb01ab9a-ezgif com-crop](https://github.com/user-attachments/assets/52098b11-f8b6-4262-ac85-01cacff6bdb1)
+
+### Multiplayer Preview
+
+<img width="1121" height="579" alt="Screenshot 2025-08-03 at 7 42 47 pm" src="https://github.com/user-attachments/assets/195bd620-d7d6-4495-bf55-45bb6ffc00f9" />
+
+---
+
+## Features
 
 ### Core Gameplay
 
-- **🧠 Advanced AI**: Minimax with alpha-beta pruning, configurable depth
-- **👥 Multiplayer**: Real-time online play via WebSocket
-- **🏠 Local Play**: Two players on the same machine
-- **♟️ Complete Chess**: All pieces, moves, and rules implemented
-- **📊 Move Validation**: Perft-verified move generation and legality
+- **Advanced AI**: Minimax with alpha-beta pruning, configurable depth
+- **Multiplayer**: Real-time online play via WebSocket
+- **Local Play**: Two players on the same machine
+- **Complete Chess**: All pieces, moves, and rules implemented
+- **Move Validation**: Perft-verified move generation and legality
 
 ### User Experience
 
-- **🎨 Modern UI**: Clean, responsive SFML-based interface
-- **🔊 Sound Effects**: Immersive audio feedback for all actions
-- **⚙️ Configurable**: JSON-based configuration system
-- **🖥️ Cross-Platform**: Windows, macOS, and Linux support
-- **🎯 High Performance**: 60 FPS with efficient rendering
+- **Modern UI**: Clean, responsive SFML-based interface with gradient menus and polished buttons
+- **Sound Effects**: Immersive audio feedback for moves, captures, and game events
+- **Configurable**: JSON-based configuration system for all settings
+- **Cross-Platform**: Windows, macOS, and Linux support
+- **High Performance**: 60 FPS with efficient rendering and hardware acceleration
+- **Intuitive Controls**: Click-and-drag interface with visual move indicators
+- **Game Over Menu**: Restart, Main Menu, and Quit options after each game
 
 ### Quality & Testing
 
-- **🧪 Comprehensive Tests**: Perft tests, unit tests, integration tests
-- **🔍 Static Analysis**: clang-tidy, sanitizers, warnings-as-errors
-- **📈 CI/CD**: Automated testing and quality gates
-- **📚 Documentation**: Complete API docs and architecture guides
+- **Comprehensive Tests**: Perft tests, unit tests, integration tests
+- **Static Analysis**: clang-tidy, sanitizers, warnings-as-errors
+- **CI/CD**: Automated testing and quality gates
+- **Documentation**: Complete API docs and architecture guides
 
-## 🏗️ Architecture
+## Architecture
 
 ### System Overview
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Chessmate Ecosystem                  │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐    ┌─────────────────┐           │
-│  │   Chessmate     │    │   Spring Boot   │           │
-│  │   Client        │◄──►│   Server        │           │
-│  │   (C++23/SFML)  │    │   (Java 17+)    │           │
-│  │                 │    │                 │           │
-│  │ • Game Engine   │    │ • Matchmaking   │           │
-│  │ • AI Player     │    │ • WebSocket Hub │           │
-│  │ • GUI/UX        │    │ • Game State    │           │
-│  │ • Network Client│    │ • Player Queue  │           │
-│  └─────────────────┘    └─────────────────┘           │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    %% Entry point
+    Start(["User Launches App"]) --> A1
+
+    %% GUI Layer
+    subgraph "GUI Layer (SFML)"
+        A1["Main Menu<br>(runMainMenu)"] -->|"User Selection"| A2["Game GUI<br>(runGUI)"]
+        A2 -->|"Mouse Events"| A3["Board View<br>(BoardView)"]
+        A3 -->|"Rendering"| A4["SFML Window<br>& Sprites"]
+        A2 -->|"UI Events"| A5["Button Widgets<br>& Overlays"]
+    end
+
+    %% Application Layer
+    subgraph "Application Layer"
+        B1["Game Controller<br>(GameController)"] -->|"Orchestrates"| B2["Game State<br>Manager"]
+        B2 -->|"Turn Control"| B3["Player Interface"]
+        B3 -->|"Move Validation"| B4["Game Engine<br>(Game)"]
+    end
+
+    %% Domain Layer
+    subgraph "Domain Layer"
+        C1["Board<br>(Board)"] -->|"Contains"| C2["Pieces<br>(Piece Hierarchy)"]
+        C2 -->|"Move Generation"| C3["Move Logic"]
+        C3 -->|"State Updates"| C4["Game State<br>(GameState)"]
+        C4 -->|"Applies Rules"| C5["Rules Engine<br>(Check, Mate, Draw)"]
+
+        %% Piece Hierarchy
+        C2 --> P1["Piece<br>(Abstract)"]
+        P1 --> P2["Pawn"]
+        P1 --> P3["Rook"]
+        P1 --> P4["Knight"]
+        P1 --> P5["Bishop"]
+        P1 --> P6["Queen"]
+        P1 --> P7["King"]
+    end
+
+    %% Infrastructure Layer
+    subgraph "Infrastructure Layer"
+        D1["AI Player<br>(AIPlayer)"] -->|"Uses"| D2["AI Evaluator<br>(Minimax + Alpha-Beta)"]
+        D3["Network Player<br>(NetworkPlayer)"] -->|"Communicates"| D4["WebSocket Client"]
+        D4 -->|"JSON Messages"| D5["Spring Boot Server"]
+        D6["Human Player<br>(HumanPlayer)"] -->|"Input"| D7["Mouse/Keyboard<br>Event Handling"]
+    end
+
+    %% Cross-layer connections
+    A2 -->|"Game Actions"| B1
+    B1 -->|"Board Updates"| C1
+    B3 -->|"Player Type"| D1
+    B3 -->|"Player Type"| D3
+    B3 -->|"Player Type"| D6
 ```
 
-### Client Architecture (Clean Architecture)
+### Clean Architecture Implementation
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Presentation Layer                   │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │
-│  │   Main      │ │   Board     │ │   Widgets   │      │
-│  │   Menu      │ │   View      │ │ • Buttons   │      │
-│  │ • Menu UI   │ │ • Piece     │ │ • Sprites   │      │
-│  │ • Dialogs   │ │   Rendering │ │ • Animations│      │
-│  └─────────────┘ └─────────────┘ └─────────────┘      │
-└─────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────┐
-│                 Application Layer                       │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           Game Controller                       │   │
-│  │  • Game Loop Management                         │   │
-│  │  • State Transitions                            │   │
-│  │  • Player Coordination                          │   │
-│  │  • Move Validation                              │   │
-│  │  • AI Integration                               │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────┐
-│                   Domain Layer                          │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │
-│  │    Game     │ │    Board    │ │   Pieces    │      │
-│  │ • Rules     │ │ • State     │ │ • Movement  │      │
-│  │ • Turns     │ │ • Position  │ │ • Validation│      │
-│  │ • History   │ │ • Check     │ │ • Types     │      │
-│  └─────────────┘ └─────────────┘ └─────────────┘      │
-└─────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────┐
-│                Infrastructure Layer                     │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │
-│  │     AI      │ │  Network    │ │   Players   │      │
-│  │  (Minimax)  │ │ (WebSocket) │ │ • Human     │      │
-│  │ • Search    │ │ • Protocol  │ │ • AI        │      │
-│  │ • Eval      │ │ • Client    │ │ • Network   │      │
-│  └─────────────┘ └─────────────┘ └─────────────┘      │
-└─────────────────────────────────────────────────────────┘
-```
+Implements a Clean Architecture pattern with clear separation of concerns across four main layers:
 
-## 🛠️ Tech Stack
+#### **GUI Layer**
+
+- **Main Menu System**: Handles game mode selection (Local, AI, Multiplayer)
+- **Game Interface**: Real-time board rendering with click-and-drag piece movement
+- **Event Processing**: Mouse and keyboard input handling with visual feedback
+- **UI Components**: Buttons, overlays, and confirmation dialogs
+
+#### **Application Layer**
+
+- **Game Controller**: Central orchestrator managing game flow and state transitions
+- **Player Management**: Creates and manages different player types (Human, AI, Network)
+- **Game Loop**: Coordinates between GUI events and domain logic
+
+#### **Domain Layer**
+
+- **Board Representation**: 8x8 grid with piece placement and movement tracking
+- **Piece Hierarchy**: Polymorphic piece system (King, Queen, Rook, Bishop, Knight, Pawn)
+- **Move Validation**: Legal move generation and chess rule enforcement
+- **Game State**: Turn management, check/checkmate detection, and game termination
+
+#### **Infrastructure Layer**
+
+- **AI Engine**: Minimax algorithm with alpha-beta pruning for intelligent gameplay
+- **Network Communication**: WebSocket client for real-time multiplayer
+- **Player Implementations**: Human input processing, AI decision making, network synchronization
+
+The system supports three game modes:
+
+1. **Local Multiplayer**: Two players on the same device
+2. **AI Mode**: Human vs AI engine
+3. **Online Multiplayer**: Real-time play over WebSocket with Spring Boot backend
+
+## Tech Stack
 
 ### Client (C++23)
 
-- **🎨 Graphics**: SFML 3.0 for rendering, window management, and audio
-- **🌐 Networking**: WebSocket++ for real-time multiplayer communication
-- **📦 JSON**: nlohmann/json for data serialization and configuration
-- **🤖 AI**: Minimax algorithm with alpha-beta pruning and iterative deepening
-- **🔨 Build**: CMake 3.20+ with presets, sanitizers, and modern tooling
-- **🧪 Testing**: Catch2 for comprehensive unit and integration testing
-- **🔍 Quality**: clang-tidy, AddressSanitizer, UndefinedBehaviorSanitizer
+- **Graphics**: SFML 3.0 for rendering, window management, and audio
+- **Networking**: WebSocket++ for real-time multiplayer communication
+- **JSON**: nlohmann/json for data serialization and configuration
+- **AI**: Minimax algorithm with alpha-beta pruning and iterative deepening
+- **Build**: CMake 3.20+ with presets, sanitizers, and modern tooling
+- **Testing**: Catch2 for comprehensive unit and integration testing
+- **Quality**: clang-tidy, AddressSanitizer, UndefinedBehaviorSanitizer
+- **Performance**: Hardware acceleration for smooth graphics and optimized AI search
 
 ### Server (Java 17+)
 
-- **☕ Framework**: Spring Boot 3.0+ for rapid development and deployment
-- **🌐 WebSocket**: Spring WebSocket for real-time bidirectional communication
-- **🔨 Build**: Maven for dependency management and packaging
-- **🐳 Container**: Docker support for easy deployment
-- **📊 Monitoring**: Built-in health checks and metrics
+- **Framework**: Spring Boot 3.0+ for rapid development and deployment
+- **WebSocket**: Spring WebSocket for real-time bidirectional communication
+- **Build**: Maven for dependency management and packaging
+- **Container**: Docker support for easy deployment
+- **Monitoring**: Built-in health checks and metrics
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -140,14 +181,14 @@ A modern, production-ready chess engine and game built with C++23 and SFML, feat
 
 ### Installation
 
-#### macOS (Homebrew)
+#### macOS
 
 ```bash
 # Install dependencies
 brew install sfml cmake openjdk@17 maven
 
 # Clone and build
-git clone https://github.com/yourusername/chessmate.git
+git clone https://github.com/sarihammad/chessmate.git
 cd chessmate
 ```
 
@@ -159,7 +200,7 @@ sudo apt update
 sudo apt install build-essential cmake libsfml-dev openjdk-17-jdk maven
 
 # Clone and build
-git clone https://github.com/yourusername/chessmate.git
+git clone https://github.com/sarihammad/chessmate.git
 cd chessmate
 ```
 
@@ -171,7 +212,7 @@ vcpkg install sfml:x64-windows
 
 # Install Java 17+ and Maven
 # Clone and build
-git clone https://github.com/yourusername/chessmate.git
+git clone https://github.com/sarihammad/chessmate.git
 cd chessmate
 ```
 
@@ -208,7 +249,7 @@ cd game
 ./build/dev/chessmate       # Run with debug configuration
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Running Tests
 
@@ -226,103 +267,7 @@ cmake --build --preset dev
 - **Integration Tests**: Full game flow testing
 - **Property Tests**: Random move generation and validation
 
-### Quality Gates
-
-```bash
-# Static Analysis
-clang-tidy src/**/*.cpp include/**/*.hpp
-
-# Sanitizers
-cmake --preset asan    # Address Sanitizer
-cmake --preset ubsan   # Undefined Behavior Sanitizer
-
-# Memory Leaks
-valgrind --leak-check=full ./chessmate
-```
-
-## ⚙️ Configuration
-
-### Client Configuration (`config.json`)
-
-```json
-{
-  "websocket": {
-    "host": "localhost",
-    "port": 8080,
-    "path": "/game"
-  },
-  "graphics": {
-    "width": 800,
-    "height": 600,
-    "fullscreen": false,
-    "vsync": true,
-    "fps": 60
-  },
-  "ai": {
-    "depth": 3
-  },
-  "audio": {
-    "enabled": true
-  },
-  "debug": {
-    "enabled": false,
-    "log_level": "info"
-  }
-}
-```
-
-### Server Configuration (`application.properties`)
-
-```properties
-server.port=8080
-spring.websocket.max-text-message-size=8192
-logging.level.com.devign.chessmate=INFO
-```
-
-## 📁 Project Structure
-
-```
-chessmate/
-├── 📁 game/                          # C++ Client
-│   ├── 📁 src/                       # Source files
-│   │   ├── 📁 application/           # Application layer
-│   │   ├── 📁 domain/                # Domain logic
-│   │   │   └── 📁 pieces/            # Chess piece implementations
-│   │   ├── 📁 gui/                   # GUI components
-│   │   ├── 📁 infrastructure/        # External concerns
-│   │   │   ├── 📁 ai/                # AI implementation
-│   │   │   ├── 📁 network/           # Network client
-│   │   │   └── 📁 players/           # Player implementations
-│   │   └── 📁 utils/                 # Utility functions
-│   ├── 📁 include/                   # Header files
-│   ├── 📁 assets/                    # Resources
-│   │   ├── 📁 images/                # Piece and board graphics
-│   │   ├── 📁 sounds/                # Audio effects
-│   │   └── 📁 fonts/                 # Text rendering
-│   ├── 📁 tests/                     # Test suites
-│   │   ├── test_board.cpp            # Board functionality tests
-│   │   ├── test_perft.cpp            # Perft validation tests
-│   │   └── test_pieces.cpp           # Piece movement tests
-│   ├── 📁 cmake/                     # CMake utilities
-│   ├── CMakeLists.txt                # Build configuration
-│   ├── CMakePresets.json             # Build presets
-│   └── .clang-tidy                   # Static analysis config
-├── 📁 server/                        # Java Server
-│   ├── 📁 src/main/java/             # Java source
-│   │   └── 📁 com/devign/chessmate/  # Package structure
-│   │       ├── ChessmateServerApplication.java
-│   │       ├── 📁 config/            # Configuration classes
-│   │       ├── 📁 service/           # Business logic
-│   │       └── 📁 socket/            # WebSocket handlers
-│   ├── 📁 src/test/java/             # Server tests
-│   ├── pom.xml                       # Maven configuration
-│   └── Dockerfile                    # Container configuration
-├── 📄 config.json                    # Client configuration
-├── 📄 .gitignore                     # Git ignore rules
-└── 📄 README.md                      # This file
-```
-
-## 🔧 Development
+## Development
 
 ### Code Style
 
@@ -332,39 +277,7 @@ chessmate/
 - **Value Semantics**: Prefer values over pointers where appropriate
 - **Clean Architecture**: Clear separation of concerns
 
-### Build Presets
-
-```bash
-cmake --preset dev      # Debug build with sanitizers
-cmake --preset release  # Optimized release build
-cmake --preset asan     # Address Sanitizer build
-cmake --preset ubsan    # Undefined Behavior Sanitizer build
-```
-
-### Contributing
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Implement** your changes with tests
-4. **Run** quality checks (`clang-tidy`, tests, sanitizers)
-5. **Commit** with conventional commits (`feat:`, `fix:`, `test:`)
-6. **Push** to your fork
-7. **Open** a Pull Request
-
-### Conventional Commits
-
-```
-feat: add new feature
-fix: bug fix
-test: add tests
-docs: update documentation
-refactor: code refactoring
-perf: performance improvement
-ci: CI/CD changes
-build: build system changes
-```
-
-## 📊 Performance
+## Performance
 
 ### Benchmarks
 
@@ -380,108 +293,14 @@ build: build system changes
 - **Move Ordering**: PV move first, then captures (MVV-LVA)
 - **Quiescence Search**: Avoid horizon effect in tactical positions
 
-## 🌐 Networking Protocol
+### Performance Considerations
 
-### WebSocket Message Format
+- **AI Optimization**: Alpha-beta pruning reduces search space exponentially
+- **Rendering**: SFML hardware acceleration for smooth graphics at 60 FPS
+- **Network**: WebSocket for low-latency multiplayer with minimal overhead
+- **Memory**: Efficient `std::unique_ptr` usage eliminates reference counting overhead
+- **Cache-Friendly**: `std::array` data structures for predictable memory layout
 
-```json
-{
-  "v": 1, // Protocol version
-  "type": "move", // Message type
-  "from": { "row": 6, "col": 4 },
-  "to": { "row": 4, "col": 4 },
-  "uuid": "unique-move-id",
-  "timestamp": 1234567890
-}
-```
-
-### Message Types
-
-- `join`: Join matchmaking queue
-- `start`: Game started notification
-- `move`: Chess move
-- `opponentMove`: Opponent's move
-- `gameOver`: Game ended
-- `ping/pong`: Keepalive
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Build Failures
-
-```bash
-# Check CMake version
-cmake --version  # Should be 3.20+
-
-# Check SFML installation
-pkg-config --cflags --libs sfml-all
-
-# Clean build
-rm -rf build/
-cmake --preset dev
-```
-
-#### Runtime Issues
-
-```bash
-# Check configuration
-cat config.json
-
-# Enable debug mode
-# Edit config.json: "debug": {"enabled": true}
-
-# Check server connection
-curl http://localhost:8080/health
-```
-
-#### Performance Issues
-
-- Reduce AI depth in configuration
-- Disable animations for better performance
-- Check system requirements
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **SFML Community** for the excellent multimedia library
-- **Chess Programming Community** for algorithms and techniques
-- **Spring Boot Team** for the robust server framework
-- **Catch2** for the testing framework
-- **Contributors** who help improve the project
-
-## 📈 Roadmap
-
-### Version 2.0
-
-- [ ] **Transposition Tables** for improved AI performance
-- [ ] **Quiescence Search** to avoid horizon effect
-- [ ] **Opening Book** for stronger opening play
-- [ ] **Endgame Tablebase** support
-- [ ] **UCI Protocol** for engine integration
-- [ ] **Chess960** variant support
-
-### Version 2.1
-
-- [ ] **Mobile Support** (Android/iOS)
-- [ ] **Tournament Mode** with multiple games
-- [ ] **Analysis Mode** with move suggestions
-- [ ] **Puzzle Mode** for training
-- [ ] **Cloud Saves** for game history
-
-### Version 3.0
-
-- [ ] **Machine Learning** AI using neural networks
-- [ ] **3D Graphics** with modern rendering
-- [ ] **VR Support** for immersive gameplay
-- [ ] **Voice Commands** for accessibility
-- [ ] **Multi-language** support
-
----
-
-**Made with ❤️ by the Chessmate Team**
-
-[⭐ Star this repo](https://github.com/yourusername/chessmate) | [🐛 Report Issues](https://github.com/yourusername/chessmate/issues) | [💬 Discussions](https://github.com/yourusername/chessmate/discussions)
