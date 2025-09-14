@@ -29,9 +29,9 @@ Checks: >
   misc-use-override,
   misc-virtual-near-miss
 
-WarningsAsErrors: '*'
+WarningsAsErrors: "*"
 
-HeaderFilterRegex: '^(include|src)/'
+HeaderFilterRegex: "^(include|src)/"
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase
@@ -63,19 +63,19 @@ CheckOptions:
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.NamespaceCase
     value: lowercase
   - key: readability-identifier-naming.ClassConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.ClassMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.PrivateMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.ProtectedMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.PublicMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.TemplateParameterCase
     value: CamelCase
   - key: readability-identifier-naming.TypeAliasCase
@@ -97,84 +97,84 @@ CheckOptions:
   - key: readability-identifier-naming.ConceptCase
     value: CamelCase
   - key: readability-identifier-naming.StaticConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.StaticVariablePrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.GlobalConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.GlobalVariablePrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.ClassConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.MacroDefinitionPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.NamespacePrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.TypeAliasPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.UnionPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.ConceptPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.TemplateParameterPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.TypeTemplateParameterPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.ValueTemplateParameterPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.VariableTemplatePrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.FunctionTemplatePrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.ClassTemplatePrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.UnionMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumCase
     value: CamelCase
   - key: readability-identifier-naming.EnumPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumMemberCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumCase
     value: CamelCase
   - key: readability-identifier-naming.EnumPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumMemberCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumCase
     value: CamelCase
   - key: readability-identifier-naming.EnumPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumMemberCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumMemberPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumConstantPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumCase
     value: CamelCase
   - key: readability-identifier-naming.EnumPrefix
-    value: ''
+    value: ""
   - key: readability-identifier-naming.EnumMemberCase
     value: UPPER_CASE
   - key: readability-identifier-naming.EnumMemberPrefix
-    value: ''
+    value: ""
