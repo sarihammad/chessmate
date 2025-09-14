@@ -12,8 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev
       - name: Configure
-        run: cd game && cmake --preset dev -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+        run: cd game && cmake --preset dev "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
       - name: Build
         run: cd game && cmake --build build/dev -j 4
       - name: Test
@@ -24,8 +29,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev
       - name: Configure (ASAN)
-        run: cd game && cmake --preset asan -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+        run: cd game && cmake --preset asan "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
       - name: Build (ASAN)
         run: cd game && cmake --build build/asan -j 4
       - name: Test (ASAN)
